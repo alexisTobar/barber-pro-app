@@ -1,54 +1,67 @@
+// 1. IMPORTACIONES
+// React y hooks para manejar el estado (memoria de la app) y efectos (acciones al cargar)
 import React, { useState, useEffect } from 'react';
+
+// Iconos de la librería 'lucide-react' para que la app se vea bonita
 import { 
   Calendar, User, CheckCircle, X, LogOut, Phone, Scissors, 
   CreditCard, ChevronRight, ArrowLeft, Plus, Trash2, Lock, 
   MessageCircle, AlertTriangle, Camera, Instagram, MapPin, 
   Tag, Globe, Edit3, Video, Image as ImageIcon, Database,
-  Star, Quote, Layout, Landmark, Check, Filter, DollarSign
+  Star, Quote, Layout, Landmark, Check, Filter, DollarSign, Map
 } from 'lucide-react';
 
-// --- INTEGRACIÓN FIREBASE (INCLUIDA AQUÍ PARA EVITAR ERRORES) ---
-import { initializeApp } from "firebase/app";
+// Importamos la conexión a la base de datos que creamos en firebase.js
+import { db } from './firebase';
+// Importamos las funciones de Firebase para leer, guardar y borrar datos
 import { 
-  getFirestore, collection, addDoc, deleteDoc, updateDoc, doc, onSnapshot 
+  collection, addDoc, deleteDoc, updateDoc, doc, onSnapshot 
 } from 'firebase/firestore';
 
-const firebaseConfig = {
-  apiKey: "AIzaSyBPz3IuCfBBAXuCIF2kfufxOT-62jbzYFo",
-  authDomain: "barberpro-app-36c6e.firebaseapp.com",
-  projectId: "barberpro-app-36c6e",
-  storageBucket: "barberpro-app-36c6e.firebasestorage.app",
-  messagingSenderId: "219195978888",
-  appId: "1:219195978888:web:05a55510d73766a9709b3d"
-};
+// ==============================================================================
+// 2. CONFIGURACIÓN INICIAL (DATOS POR DEFECTO)
+// ==============================================================================
 
-// Inicializar Firebase
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-
-// --- DATOS POR DEFECTO ---
+// Estos datos se usan SOLO la primera vez para llenar la base de datos si está vacía.
+// Representan el contenido editable de la página web (CMS).
 const DEFAULT_CMS_DATA = {
-  heroTitle: "Estilo Legendario",
-  heroSubtitle: "Tu imagen es nuestra prioridad. Agenda en segundos con los mejores.",
-  aboutTitle: "Más que una Barbería",
-  aboutText: "En Barber Pro no solo cortamos cabello, creamos experiencias. Un ambiente relajado, buena música y los mejores profesionales de Talagante listos para asesorarte.",
-  address: "Esmeralda 1062, Talagante",
-  mapUrl: "https://maps.google.com/maps?q=Esmeralda+1062,+Talagante&t=&z=15&ie=UTF8&iwloc=&output=embed",
+  heroTitle: "Estilo Legendario", // Título grande de la portada
+  heroSubtitle: "Tu imagen es nuestra prioridad. Agenda en segundos.", // Subtítulo
+  aboutTitle: "Más que una Barbería", // Título sección "Sobre Nosotros"
+  aboutText: "En Barber Pro no solo cortamos cabello, creamos experiencias...", // Texto descriptivo
+  
+  // Array de Sucursales (V7: Soporte para múltiples locales)
+  locations: [
+    { 
+      id: 1, 
+      name: "Casa Matriz", 
+      address: "Esmeralda 1062, Talagante", 
+      mapUrl: "https://maps.google.com/maps?q=Esmeralda+1062,+Talagante&t=&z=15&ie=UTF8&iwloc=&output=embed" 
+    }
+  ],
+  
+  // Redes Sociales
   instagramUser: "@BarberPro_Talagante",
   instagramLink: "https://instagram.com",
-  gallery: [],
+  
+  gallery: [], // Aquí se guardarán las fotos y reels de Instagram
+  
+  // Fotos para la sección "Sobre Nosotros"
   shopPhotos: [
     { id: 1, url: "https://images.unsplash.com/photo-1503951914875-befbb711058c?auto=format&fit=crop&w=800&q=80" },
     { id: 2, url: "https://images.unsplash.com/photo-1621605815971-fbc98d665033?auto=format&fit=crop&w=800&q=80" }
   ],
+  
+  // Testimonios iniciales de ejemplo
   testimonials: [
-    { id: 1, name: "Carlos M.", text: "El mejor degradado que me han hecho. Dani es un crack.", stars: 5 },
-    { id: 2, name: "Felipe R.", text: "Excelente atención y el local es muy cómodo.", stars: 5 }
+    { id: 1, name: "Carlos M.", text: "El mejor degradado que me han hecho.", stars: 5 },
+    { id: 2, name: "Felipe R.", text: "Excelente atención.", stars: 5 }
   ],
-  offers: []
+  
+  offers: [] // Ofertas vacías por defecto
 };
 
-// --- USUARIOS BASE ---
+// Usuarios iniciales para poder entrar al sistema la primera vez
 const SEED_USERS = [
   {
     name: "Dueño / Admin", username: "admin", password: "123", role: "admin",
@@ -57,67 +70,92 @@ const SEED_USERS = [
   { 
     name: 'Dani "El Mago"', username: "dani", password: "123", role: "barber",
     photo: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix', phone: "56911111111",
-    bank: {
-      name: "Daniel Mago", rut: "15.111.111-1", bankName: "Banco Estado",
-      type: "Cuenta RUT", number: "15111111", email: "dani@barber.cl"
-    },
+    // Datos bancarios para que el cliente transfiera
+    bank: { name: "Daniel Mago", rut: "15.111.111-1", bankName: "Banco Estado", type: "Cuenta RUT", number: "15111111", email: "dani@barber.cl" },
     services: [{ id: 101, name: 'Corte Degradado', price: 12000 }, { id: 102, name: 'Barba Terapia', price: 15000 }]
   }
 ];
 
+// ==============================================================================
+// 3. COMPONENTE PRINCIPAL (LA APLICACIÓN ENTERA)
+// ==============================================================================
 export default function App() {
-  // --- ESTADOS ---
-  const [users, setUsers] = useState([]);
-  const [appointments, setAppointments] = useState([]);
-  const [cmsData, setCmsData] = useState(DEFAULT_CMS_DATA);
-  const [cmsId, setCmsId] = useState(null);
   
-  const [view, setView] = useState('landing');
-  const [loading, setLoading] = useState(true);
-  const [currentUser, setCurrentUser] = useState(null);
-  const [loginForm, setLoginForm] = useState({ user: '', pass: '', error: '' });
+  // --- ESTADOS DE LA BASE DE DATOS (DATA VIVA) ---
+  const [users, setUsers] = useState([]); // Lista de barberos y admin
+  const [appointments, setAppointments] = useState([]); // Lista de todas las citas
+  const [cmsData, setCmsData] = useState(DEFAULT_CMS_DATA); // Contenido de la web
+  const [cmsId, setCmsId] = useState(null); // ID del documento CMS en Firebase para actualizarlo
+  
+  // --- ESTADOS DE NAVEGACIÓN Y SESIÓN ---
+  const [view, setView] = useState('landing'); // Controla qué pantalla se ve ('landing', 'login', 'admin', 'booking')
+  const [loading, setLoading] = useState(true); // Pantalla de carga inicial
+  const [currentUser, setCurrentUser] = useState(null); // Usuario logueado actualmente
+  const [loginForm, setLoginForm] = useState({ user: '', pass: '', error: '' }); // Datos del formulario login
 
-  // Admin/Barber States
-  const [adminTab, setAdminTab] = useState('agenda'); 
-  const [agendaMode, setAgendaMode] = useState('daily'); 
-  const [filterDate, setFilterDate] = useState(new Date().toISOString().split('T')[0]); 
+  // --- ESTADOS DEL PANEL DE ADMIN ---
+  const [adminTab, setAdminTab] = useState('agenda'); // Pestaña activa en el panel
+  const [agendaMode, setAgendaMode] = useState('daily'); // Filtro de agenda: 'daily' (diario) o 'pending' (por cobrar)
+  const [filterDate, setFilterDate] = useState(new Date().toISOString().split('T')[0]); // Fecha seleccionada en el calendario
 
-  const [newBarber, setNewBarber] = useState({ 
-    name: '', username: '', password: '', photo: '', phone: '',
-    bankName: '', bankRut: '', bankBank: '', bankType: '', bankNumber: '', bankEmail: ''
-  });
+  // Formularios para crear cosas nuevas (Barberos, Ofertas, Fotos, etc.)
+  const [newBarber, setNewBarber] = useState({ name: '', username: '', password: '', photo: '', phone: '', bankName: '', bankRut: '', bankBank: '', bankType: '', bankNumber: '', bankEmail: '' });
   const [newOffer, setNewOffer] = useState({ title: '', price: '', desc: '' });
   const [newGalleryItem, setNewGalleryItem] = useState({ type: 'image', url: '', link: '' });
-  const [newTestimonial, setNewTestimonial] = useState({ name: '', text: '' });
   const [newShopPhoto, setNewShopPhoto] = useState('');
-  const [newService, setNewService] = useState({ name: '', price: '' });
+  const [newLocation, setNewLocation] = useState({ name: '', address: '', mapUrl: '' }); // V7: Nueva Sucursal
+
+  // --- ESTADOS DEL BARBERO ---
+  const [newService, setNewService] = useState({ name: '', price: '' }); // Para agregar servicios
+  const [cancelReason, setCancelReason] = useState(''); // Motivo de cancelación
+  const [apptToCancel, setApptToCancel] = useState(null); // Cita que se va a cancelar
+
+  // --- ESTADOS DEL CLIENTE (RESERVA) ---
+  const [bookingStep, setBookingStep] = useState(1); // Paso del wizard (1:Barbero, 2:Servicio, etc)
+  const [reservation, setReservation] = useState({ barber: null, service: null, date: '', time: '', client: '', phone: '' }); // Datos de la reserva en curso
+  const [lastBookingData, setLastBookingData] = useState(null); // Datos para mostrar en la pantalla final
   
-  const [cancelReason, setCancelReason] = useState('');
-  const [apptToCancel, setApptToCancel] = useState(null);
+  // --- ESTADO PARA RESEÑAS DE CLIENTES (V7) ---
+  const [showReviewModal, setShowReviewModal] = useState(false); // Mostrar/Ocultar modal
+  const [clientReview, setClientReview] = useState({ name: '', text: '', stars: 5 }); // Formulario de reseña
 
-  // Client States
-  const [bookingStep, setBookingStep] = useState(1);
-  const [reservation, setReservation] = useState({ barber: null, service: null, date: '', time: '', client: '', phone: '' });
-  const [lastBookingData, setLastBookingData] = useState(null); 
-
-  // =============================================================
-  // CONEXIÓN FIREBASE
-  // =============================================================
+  // ==============================================================================
+  // 4. CONEXIÓN A FIREBASE (EL CEREBRO)
+  // ==============================================================================
+  
+  // Este efecto se ejecuta una sola vez al iniciar la app
   useEffect(() => {
-    const unsubUsers = onSnapshot(collection(db, "users"), (s) => setUsers(s.docs.map(d => ({ id: d.id, ...d.data() }))));
-    const unsubAppts = onSnapshot(collection(db, "appointments"), (s) => setAppointments(s.docs.map(d => ({ id: d.id, ...d.data() }))));
-    const unsubCms = onSnapshot(collection(db, "cms"), (s) => {
-      if (!s.empty) { setCmsData(s.docs[0].data()); setCmsId(s.docs[0].id); }
-      setLoading(false);
+    // 1. Nos conectamos a la colección "users" y escuchamos cambios en tiempo real
+    const unsubUsers = onSnapshot(collection(db, "users"), (s) => {
+      // Cuando algo cambia, actualizamos el estado 'users'
+      setUsers(s.docs.map(d => ({ id: d.id, ...d.data() })));
     });
+
+    // 2. Nos conectamos a "appointments" (Citas)
+    const unsubAppts = onSnapshot(collection(db, "appointments"), (s) => {
+      setAppointments(s.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+
+    // 3. Nos conectamos a "cms" (Contenido Web)
+    const unsubCms = onSnapshot(collection(db, "cms"), (s) => {
+      if (!s.empty) { 
+        setCmsData(s.docs[0].data()); // Cargamos los datos
+        setCmsId(s.docs[0].id); // Guardamos el ID para poder editar después
+      }
+      setLoading(false); // Terminamos de cargar
+    });
+
+    // Función de limpieza: desconectar cuando se cierra la app
     return () => { unsubUsers(); unsubAppts(); unsubCms(); };
   }, []);
 
+  // Función genérica para guardar cualquier cambio del CMS en la base de datos
   const saveCms = async (newData) => {
-    if (cmsId) await updateDoc(doc(db, "cms", cmsId), newData);
-    else await addDoc(collection(db, "cms"), newData);
+    if (cmsId) await updateDoc(doc(db, "cms", cmsId), newData); // Si ya existe, actualiza
+    else await addDoc(collection(db, "cms"), newData); // Si no existe, crea
   };
 
+  // Función "Semilla": Solo sirve si la BD está vacía para crear el Admin inicial
   const seedDatabase = async () => {
     if (confirm("¿Inicializar Base de Datos?")) {
       for (const u of SEED_USERS) await addDoc(collection(db, "users"), u);
@@ -126,27 +164,38 @@ export default function App() {
     }
   };
 
-  // =============================================================
-  // LÓGICA DE NEGOCIO
-  // =============================================================
+  // ==============================================================================
+  // 5. LÓGICA DE NEGOCIO (REGLAS DEL JUEGO)
+  // ==============================================================================
+
+  // CALCULA HORAS DISPONIBLES Y APLICA BLOQUEO DE 1 HORA
   const getAvailableSlots = (barberId, date) => {
     const slots = [];
-    const startHour = 10;
-    const endHour = 20;
+    const startHour = 10; // Abre a las 10:00
+    const endHour = 20;   // Cierra a las 20:00
+    
+    // Filtramos citas confirmadas o pendientes de ese día y barbero
     const barberAppts = appointments.filter(a => a.barberId === barberId && a.date === date && a.status !== 'cancelled');
+
+    // Recorremos hora por hora
     for (let h = startHour; h < endHour; h++) {
       const timeString = `${h}:00`; 
       const slotMinutes = h * 60;
+      
+      // Verificamos si esta hora choca con alguna cita existente
       const isBlocked = barberAppts.some(appt => {
         const [apptH, apptM] = appt.time.split(':').map(Number);
         const apptMinutes = apptH * 60 + apptM;
+        // Si hay menos de 60 minutos de diferencia, está bloqueado
         return Math.abs(slotMinutes - apptMinutes) < 60; 
       });
+
       slots.push({ time: timeString, available: !isBlocked });
     }
     return slots;
   };
 
+  // Transforma links de Instagram normales a formato "Embed" para que se vean los videos
   const getEmbedUrl = (url) => {
     if (!url) return '';
     if (url.includes('/embed')) return url;
@@ -154,14 +203,40 @@ export default function App() {
     return cleanUrl.endsWith('/') ? `${cleanUrl}embed` : `${cleanUrl}/embed`;
   };
 
-  // =============================================================
-  // MANEJADORES CMS
-  // =============================================================
+  // ==============================================================================
+  // 6. MANEJADORES DE ACCIONES (ADMINISTRACIÓN)
+  // ==============================================================================
+
+  // Función helper para actualizar un campo del CMS rápidamente
   const handleUpdateCms = (field, value) => {
     const newData = { ...cmsData, [field]: value };
-    setCmsData(newData);
-    saveCms(newData);
+    setCmsData(newData); // Actualiza visual
+    saveCms(newData); // Guarda en DB
   };
+
+  // --- GESTIÓN DE SUCURSALES (V7) ---
+  const handleAddLocation = (e) => {
+    e.preventDefault();
+    if(!newLocation.name || !newLocation.address) return alert("Faltan datos de sucursal");
+    const updated = [...(cmsData.locations || []), { id: Date.now(), ...newLocation }];
+    handleUpdateCms('locations', updated);
+    setNewLocation({ name: '', address: '', mapUrl: '' });
+  };
+  const handleDeleteLocation = (id) => handleUpdateCms('locations', cmsData.locations.filter(l => l.id !== id));
+
+  // --- GESTIÓN DE RESEÑAS CLIENTE (V7) ---
+  const handleSubmitReview = (e) => {
+    e.preventDefault();
+    if(!clientReview.name || !clientReview.text) return alert("Completa los campos");
+    const updated = [...(cmsData.testimonials || []), { id: Date.now(), ...clientReview }];
+    handleUpdateCms('testimonials', updated);
+    setClientReview({ name: '', text: '', stars: 5 });
+    setShowReviewModal(false);
+    alert("¡Gracias por tu opinión!");
+  };
+  const handleDeleteTestimonial = (id) => handleUpdateCms('testimonials', cmsData.testimonials.filter(t => t.id !== id));
+
+  // --- GESTIÓN DE OFERTAS ---
   const handleAddOffer = (e) => {
     e.preventDefault();
     if(!newOffer.title) return;
@@ -170,22 +245,19 @@ export default function App() {
     setNewOffer({ title: '', price: '', desc: '' });
   };
   const handleDeleteOffer = (id) => handleUpdateCms('offers', cmsData.offers.filter(o => o.id !== id));
+
+  // --- GESTIÓN DE GALERÍA ---
   const handleAddGalleryItem = () => {
     if(!newGalleryItem.url) return;
+    // Si es reel, usa la misma URL. Si es foto, usa el link global si no se especifica uno.
     const linkToUse = newGalleryItem.link || (newGalleryItem.type === 'reel' ? newGalleryItem.url : cmsData.instagramLink);
     const updated = [...(cmsData.gallery || []), { id: Date.now(), ...newGalleryItem, link: linkToUse }];
     handleUpdateCms('gallery', updated);
     setNewGalleryItem({ type: 'image', url: '', link: '' });
   };
   const handleDeleteGalleryItem = (id) => handleUpdateCms('gallery', cmsData.gallery.filter(i => i.id !== id));
-  const handleAddTestimonial = (e) => {
-    e.preventDefault();
-    if(!newTestimonial.name) return;
-    const updated = [...(cmsData.testimonials || []), { id: Date.now(), ...newTestimonial, stars: 5 }];
-    handleUpdateCms('testimonials', updated);
-    setNewTestimonial({ name: '', text: '' });
-  };
-  const handleDeleteTestimonial = (id) => handleUpdateCms('testimonials', cmsData.testimonials.filter(t => t.id !== id));
+
+  // --- GESTIÓN DE FOTOS LOCAL ---
   const handleAddShopPhoto = () => {
     if(!newShopPhoto) return;
     const updated = [...(cmsData.shopPhotos || []), { id: Date.now(), url: newShopPhoto }];
@@ -194,9 +266,11 @@ export default function App() {
   };
   const handleDeleteShopPhoto = (id) => handleUpdateCms('shopPhotos', cmsData.shopPhotos.filter(p => p.id !== id));
 
-  // =============================================================
-  // GESTIÓN
-  // =============================================================
+  // ==============================================================================
+  // 7. GESTIÓN DE USUARIOS Y CITAS
+  // ==============================================================================
+
+  // Login de Staff
   const handleLogin = (e) => {
     e.preventDefault();
     const foundUser = users.find(u => u.username === loginForm.user && u.password === loginForm.pass);
@@ -209,7 +283,9 @@ export default function App() {
     }
   };
 
+  // Crear Reserva (Cliente)
   const requestReservation = async () => {
+    // Guardamos la cita en estado 'pending' (Amarillo)
     await addDoc(collection(db, "appointments"), {
       barberId: reservation.barber.id,
       clientName: reservation.client,
@@ -222,15 +298,18 @@ export default function App() {
       deposit: { paid: false, method: 'Transferencia' }
     });
     
+    // Generamos mensaje para WhatsApp
     const msg = `Hola ${reservation.barber.name} 👋, soy ${reservation.client}. Acabo de transferir el abono para mi cita: *${reservation.service.name}* el ${reservation.date} a las ${reservation.time}. Aquí te envío el comprobante (Foto). Quedo atento a tu confirmación.`;
     const link = `https://wa.me/${reservation.barber.phone}?text=${encodeURIComponent(msg)}`;
-
-    setLastBookingData({ waLink: link });
-    setBookingStep(5); 
+    
+    setLastBookingData({ waLink: link }); // Guardamos link para la pantalla final
+    setBookingStep(5); // Movemos al paso final
   };
 
+  // Confirmar Pago (Barbero)
   const confirmPayment = async (apptId) => {
     if(window.confirm("¿Confirmas que recibiste el abono?")) {
+      // Actualizamos Firebase: estado 'confirmed'
       await updateDoc(doc(db, "appointments", apptId), { 
         status: 'confirmed',
         'deposit.paid': true 
@@ -238,84 +317,81 @@ export default function App() {
     }
   };
 
+  // Cancelar Cita (Barbero/Admin)
   const confirmCancellation = async () => {
     if (!cancelReason) return alert("Escribe un motivo");
+    // Actualizamos estado a 'cancelled'
     await updateDoc(doc(db, "appointments", apptToCancel.id), { status: 'cancelled' });
+    
+    // Abrimos WhatsApp para avisar al cliente
     let cleanPhone = apptToCancel.phone.replace(/\D/g, ''); 
     if (cleanPhone.length >= 8 && !cleanPhone.startsWith('56')) cleanPhone = '569' + cleanPhone; 
     const message = `Hola ${apptToCancel.clientName}. Cancelamos tu cita: ${cancelReason}.`;
     window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`, '_blank');
+    
     setApptToCancel(null);
     setCancelReason('');
   };
 
+  // Agregar Barbero (Admin)
   const handleAddBarber = async (e) => {
     e.preventDefault();
-    
-    // VALIDACIÓN ESTRICTA: NO CAMPOS VACÍOS
-    if (
-      !newBarber.name.trim() || 
-      !newBarber.username.trim() || 
-      !newBarber.password.trim() || 
-      !newBarber.phone.trim()
-    ) {
-        return alert("¡Error! Nombre, Usuario, Contraseña y Teléfono son obligatorios.");
+    // Validamos que no haya campos vacíos críticos
+    if (!newBarber.name.trim() || !newBarber.username.trim() || !newBarber.password.trim() || !newBarber.phone.trim()) {
+        return alert("¡Faltan datos obligatorios!");
     }
-
+    
+    // Si no hay foto, usamos avatar automático
     const photoUrl = newBarber.photo.trim() || `https://api.dicebear.com/7.x/avataaars/svg?seed=${newBarber.username}`;
+    
     const newUser = { 
       role: 'barber', 
-      name: newBarber.name,
-      username: newBarber.username,
-      password: newBarber.password,
-      phone: newBarber.phone,
-      photo: photoUrl, 
-      bank: {
-        name: newBarber.bankName, rut: newBarber.bankRut, bankName: newBarber.bankBank,
-        type: newBarber.bankType, number: newBarber.bankNumber, email: newBarber.bankEmail
-      },
+      name: newBarber.name, username: newBarber.username, password: newBarber.password, phone: newBarber.phone, photo: photoUrl, 
+      bank: { name: newBarber.bankName, rut: newBarber.bankRut, bankName: newBarber.bankBank, type: newBarber.bankType, number: newBarber.bankNumber, email: newBarber.bankEmail },
       services: [] 
     };
     await addDoc(collection(db, "users"), newUser);
     setNewBarber({ name: '', username: '', password: '', photo: '', phone: '', bankName: '', bankRut: '', bankBank: '', bankType: '', bankNumber: '', bankEmail: '' });
-    alert("Barbero creado exitosamente.");
+    alert("Barbero creado.");
   };
 
   const handleDeleteBarber = async (id) => { if(window.confirm("¿Eliminar?")) await deleteDoc(doc(db, "users", id)); };
   
+  // Agregar Servicio (Barbero)
   const handleAddService = async () => {
-    // VALIDACIÓN ESTRICTA: NO CAMPOS VACÍOS EN SERVICIOS
-    if (!newService.name.trim() || !newService.price) {
-        return alert("¡Error! Debes ingresar un nombre y un precio para el servicio.");
-    }
-
+    if (!newService.name.trim() || !newService.price) return alert("Completa los datos.");
     const updatedServices = [...(currentUser.services || []), { id: Date.now(), name: newService.name, price: parseInt(newService.price) }];
     await updateDoc(doc(db, "users", currentUser.id), { services: updatedServices });
     setCurrentUser({ ...currentUser, services: updatedServices });
     setNewService({ name: '', price: '' });
   };
 
-  // =============================================================
-  // VISTAS
-  // =============================================================
+  // ==============================================================================
+  // 8. RENDERIZADO DE VISTAS (LO QUE SE VE EN PANTALLA)
+  // ==============================================================================
 
   if (loading) return <div className="min-h-screen bg-black flex items-center justify-center text-white font-bold">Cargando Barber Pro...</div>;
 
+  // --- VISTA 1: LANDING PAGE (CLIENTE) ---
   if (view === 'landing') {
     const barbersList = users.filter(u => u.role === 'barber');
 
     return (
       <div className="min-h-screen font-sans flex flex-col relative bg-zinc-950 overflow-x-hidden text-white">
+        
+        {/* FONDO HERO */}
         <div className="absolute inset-0 z-0">
           <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/60 to-zinc-950 z-10"></div> 
           <img src="https://images.unsplash.com/photo-1585747860715-2ba37e788b70?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80" className="w-full h-full object-cover opacity-60" alt="bg"/>
         </div>
 
         <div className="relative z-20 flex flex-col min-h-screen">
+          {/* BOTÓN FLOTANTE WHATSAPP */}
           <a href={`https://wa.me/56900000000`} target="_blank" className="fixed bottom-6 right-6 bg-green-500 p-4 rounded-full shadow-lg z-50 hover:scale-110 transition animate-bounce">
             <MessageCircle size={28} color="white" />
           </a>
 
+          {/* NAVBAR */}
           <nav className="p-6 flex justify-between items-center border-b border-white/10 backdrop-blur-md">
             <div className="flex items-center gap-3">
               <div className="bg-yellow-500 p-2 rounded-lg text-black shadow-[0_0_15px_rgba(234,179,8,0.5)]"><Scissors size={24}/></div>
@@ -326,12 +402,14 @@ export default function App() {
             </button>
           </nav>
 
+          {/* SECCIÓN PORTADA */}
           <div className="flex-1 flex flex-col items-center justify-center text-center p-6 mt-10">
             <h1 className="text-5xl md:text-7xl font-black mb-6 uppercase leading-none tracking-tighter animate-fade-in-up text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 via-yellow-500 to-yellow-600 drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">{cmsData.heroTitle}</h1>
             <p className="text-gray-200 mb-12 text-lg max-w-2xl mx-auto animate-fade-in-up delay-100 font-light drop-shadow-md">{cmsData.heroSubtitle}</p>
             <button onClick={() => setView('booking')} className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-black font-black py-5 px-12 rounded-full text-xl hover:from-yellow-400 hover:to-yellow-500 transition transform hover:scale-105 shadow-[0_0_30px_rgba(234,179,8,0.6)] active:scale-95 flex flex-row items-center justify-center gap-3"><Calendar size={24} /> <span>RESERVAR AHORA</span></button>
           </div>
 
+          {/* SECCIÓN OFERTAS */}
           {cmsData.offers && cmsData.offers.length > 0 && (
             <section className="py-12 px-4 bg-zinc-900/50 backdrop-blur-sm border-y border-white/10">
               <div className="max-w-6xl mx-auto">
@@ -350,6 +428,7 @@ export default function App() {
             </section>
           )}
 
+          {/* SECCIÓN EQUIPO */}
           <section className="py-20 px-4 bg-zinc-950">
             <div className="max-w-6xl mx-auto text-center">
               <h3 className="text-3xl font-black text-white mb-12 uppercase tracking-tight">Nuestro Equipo</h3>
@@ -365,6 +444,7 @@ export default function App() {
             </div>
           </section>
 
+          {/* SECCIÓN SOBRE NOSOTROS Y TESTIMONIOS (RESTAURADO) */}
           <section className="py-20 bg-zinc-900 text-white border-t border-white/5">
             <div className="max-w-6xl mx-auto px-4 grid md:grid-cols-2 gap-12 items-center">
               <div>
@@ -376,13 +456,17 @@ export default function App() {
                   ))}
                 </div>
               </div>
+              
               <div className="bg-black/40 p-8 rounded-3xl relative border border-white/5">
                 <Quote className="absolute top-6 left-6 text-yellow-600 opacity-20" size={60} />
-                <h4 className="text-2xl font-bold mb-8 text-center">Opiniones Reales</h4>
+                <div className="flex justify-between items-center mb-8">
+                  <h4 className="text-2xl font-bold">Opiniones</h4>
+                  <button onClick={() => setShowReviewModal(true)} className="text-xs bg-yellow-600 text-black px-3 py-1 rounded font-bold hover:bg-yellow-500">Dejar Reseña</button>
+                </div>
                 <div className="space-y-4">
                   {cmsData.testimonials && cmsData.testimonials.map(t => (
                     <div key={t.id} className="bg-zinc-800 p-5 rounded-xl shadow-sm border border-white/5">
-                      <div className="flex text-yellow-500 mb-2 gap-1">{[...Array(t.stars)].map((_, i) => <Star key={i} size={14} fill="currentColor" />)}</div>
+                      <div className="flex text-yellow-500 mb-2 gap-1">{[...Array(parseInt(t.stars))].map((_, i) => <Star key={i} size={14} fill="currentColor" />)}</div>
                       <p className="text-gray-300 italic text-sm mb-3">"{t.text}"</p>
                       <p className="text-xs font-bold text-white uppercase tracking-wide">- {t.name}</p>
                     </div>
@@ -392,22 +476,33 @@ export default function App() {
             </div>
           </section>
 
+          {/* SECCIÓN SUCURSALES (V7 - MULTI UBICACIÓN) */}
           <section className="py-20 bg-black border-t border-white/10">
-            <div className="max-w-6xl mx-auto px-4 grid md:grid-cols-2 gap-12 items-center">
-              <div>
-                <h3 className="text-4xl font-black mb-6 uppercase text-white">Ubicación</h3>
-                <div className="flex items-center gap-4 mb-8">
-                  <div className="bg-yellow-600 p-3 rounded-full text-white"><MapPin size={24} /></div>
-                  <div><p className="text-gray-400 text-sm uppercase font-bold tracking-wider">Te esperamos en</p><p className="text-2xl font-bold text-white">{cmsData.address}</p></div>
-                </div>
-                <button onClick={() => setView('booking')} className="bg-white text-black px-10 py-4 rounded-xl font-black hover:bg-gray-200 transition shadow-[0_0_20px_rgba(255,255,255,0.3)]">AGENDAR VISITA</button>
+            <div className="max-w-6xl mx-auto px-4">
+              <h3 className="text-4xl font-black mb-10 uppercase text-white text-center">Nuestras Sucursales</h3>
+              <div className="grid md:grid-cols-2 gap-8">
+                {cmsData.locations && cmsData.locations.length > 0 ? cmsData.locations.map(loc => (
+                  <div key={loc.id} className="bg-zinc-900 rounded-3xl overflow-hidden border border-white/10">
+                    <div className="h-64 grayscale hover:grayscale-0 transition duration-500">
+                      <iframe src={loc.mapUrl} width="100%" height="100%" style={{ border: 0 }} allowFullScreen="" loading="lazy"></iframe>
+                    </div>
+                    <div className="p-6">
+                      <h4 className="text-xl font-bold text-white mb-2">{loc.name}</h4>
+                      <div className="flex items-center gap-2 text-gray-400">
+                        <MapPin size={18} className="text-yellow-600" />
+                        <p>{loc.address}</p>
+                      </div>
+                    </div>
+                  </div>
+                )) : <p className="text-center text-gray-500">No hay ubicaciones configuradas.</p>}
               </div>
-              <div className="h-72 md:h-96 rounded-3xl overflow-hidden shadow-2xl border border-white/20 grayscale hover:grayscale-0 transition duration-500">
-                <iframe src={cmsData.mapUrl} width="100%" height="100%" style={{ border: 0 }} allowFullScreen="" loading="lazy"></iframe>
+              <div className="text-center mt-10">
+                <button onClick={() => setView('booking')} className="bg-white text-black px-10 py-4 rounded-xl font-black hover:bg-gray-200 transition shadow-[0_0_20px_rgba(255,255,255,0.3)]">AGENDAR VISITA</button>
               </div>
             </div>
           </section>
 
+          {/* SECCIÓN GALERÍA */}
           <section className="py-16 bg-zinc-950 border-t border-white/10">
             <div className="max-w-6xl mx-auto px-4">
               <div className="flex flex-col items-center mb-10">
@@ -432,12 +527,34 @@ export default function App() {
           </section>
 
           <div className="text-center p-8 bg-black text-white/20 text-xs border-t border-white/5">© 2025 Barber Pro System</div>
+        
+          {/* MODAL DEJAR RESEÑA (CLIENTE) */}
+          {showReviewModal && (
+            <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+              <div className="bg-zinc-900 border border-white/10 w-full max-w-sm rounded-2xl p-6 shadow-2xl">
+                <h3 className="text-xl font-bold text-white mb-4">Tu Opinión</h3>
+                <form onSubmit={handleSubmitReview}>
+                  <input type="text" placeholder="Tu Nombre" className="w-full p-3 bg-black border border-white/10 rounded-lg mb-3 text-white" value={clientReview.name} onChange={e => setClientReview({...clientReview, name: e.target.value})} />
+                  <textarea placeholder="Comentario..." className="w-full p-3 bg-black border border-white/10 rounded-lg mb-3 text-white h-24" value={clientReview.text} onChange={e => setClientReview({...clientReview, text: e.target.value})}></textarea>
+                  <div className="flex gap-2 mb-4">
+                    {[1,2,3,4,5].map(s => (
+                      <button key={s} type="button" onClick={() => setClientReview({...clientReview, stars: s})} className={`${s <= clientReview.stars ? 'text-yellow-500' : 'text-gray-600'}`}><Star size={24} fill="currentColor"/></button>
+                    ))}
+                  </div>
+                  <div className="flex gap-2">
+                    <button type="button" onClick={() => setShowReviewModal(false)} className="flex-1 py-2 text-gray-400">Cancelar</button>
+                    <button type="submit" className="flex-1 bg-yellow-600 text-black font-bold rounded-lg py-2">Enviar</button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     );
   }
 
-  // --- LOGIN ---
+  // --- VISTA 2: LOGIN ---
   if (view === 'login') {
     return (
       <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4">
@@ -459,11 +576,10 @@ export default function App() {
     );
   }
 
-  // --- PANELES ---
+  // --- VISTA 3: PANELES (ADMIN Y BARBERO) ---
   if (view === 'admin-panel' || view === 'barber-panel') {
     const visibleAppts = currentUser.role === 'admin' ? appointments : appointments.filter(a => a.barberId === currentUser.id);
     
-    // FILTRADO INTELIGENTE
     let filteredAppts = visibleAppts.filter(a => a.status !== 'cancelled');
     if (agendaMode === 'daily') {
       filteredAppts = filteredAppts.filter(a => a.date === filterDate);
@@ -491,7 +607,7 @@ export default function App() {
         )}
 
         <main className="p-4 space-y-6 max-w-3xl mx-auto">
-          {/* TAB: AGENDA (CON NUEVOS FILTROS) */}
+          {/* TAB: AGENDA (CON FILTROS) */}
           {(adminTab === 'agenda' || currentUser.role === 'barber') && (
             <div className="space-y-4">
               <div className="bg-white p-2 rounded-xl shadow-sm flex flex-col gap-2">
@@ -592,7 +708,7 @@ export default function App() {
             </section>
           )}
 
-          {/* TAB: WEB CMS */}
+          {/* TAB: WEB CMS (ADMIN) - RESTAURADA Y MEJORADA V7 */}
           {currentUser.role === 'admin' && adminTab === 'website' && (
             <div className="space-y-6">
               <section className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
@@ -602,12 +718,14 @@ export default function App() {
                   <textarea className="w-full p-2 border rounded h-20" value={cmsData.heroSubtitle} onChange={(e) => handleUpdateCms('heroSubtitle', e.target.value)} />
                 </div>
               </section>
+
               <section className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
                 <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2"><Layout size={18}/> Sobre Nosotros y Local</h3>
                 <div className="space-y-3 mb-4">
-                  <input type="text" className="w-full p-2 border rounded font-bold" placeholder="Título (Ej: Más que una barbería)" value={cmsData.aboutTitle} onChange={(e) => handleUpdateCms('aboutTitle', e.target.value)} />
+                  <input type="text" className="w-full p-2 border rounded font-bold" placeholder="Título" value={cmsData.aboutTitle} onChange={(e) => handleUpdateCms('aboutTitle', e.target.value)} />
                   <textarea className="w-full p-2 border rounded h-20" placeholder="Descripción del local..." value={cmsData.aboutText} onChange={(e) => handleUpdateCms('aboutText', e.target.value)} />
                 </div>
+                
                 <div className="bg-gray-50 p-3 rounded-lg border mb-3">
                    <p className="text-xs font-bold text-gray-400 mb-2 uppercase">Agregar Foto del Local</p>
                    <div className="flex gap-2">
@@ -621,7 +739,78 @@ export default function App() {
                   ))}
                 </div>
               </section>
-              {/* OTRAS SECCIONES CMS (IGUALES QUE ANTES) */}
+
+              {/* SUCURSALES (V7) */}
+              <section className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
+                <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2"><Map size={18}/> Gestión de Sucursales</h3>
+                <div className="bg-gray-50 p-3 rounded-lg border mb-4">
+                   <input type="text" placeholder="Nombre (Ej: Casa Matriz)" className="w-full p-2 border rounded text-sm mb-2" value={newLocation.name} onChange={e => setNewLocation({...newLocation, name: e.target.value})} />
+                   <input type="text" placeholder="Dirección" className="w-full p-2 border rounded text-sm mb-2" value={newLocation.address} onChange={e => setNewLocation({...newLocation, address: e.target.value})} />
+                   <input type="text" placeholder="URL Mapa Embed" className="w-full p-2 border rounded text-sm mb-2" value={newLocation.mapUrl} onChange={e => setNewLocation({...newLocation, mapUrl: e.target.value})} />
+                   <button onClick={handleAddLocation} className="w-full bg-black text-white py-2 rounded text-sm font-bold">Agregar Sucursal</button>
+                </div>
+                <div className="space-y-2">
+                  {cmsData.locations && cmsData.locations.map(loc => (
+                    <div key={loc.id} className="flex justify-between items-center text-sm border-b py-2">
+                      <div><span className="font-bold">{loc.name}</span> - {loc.address}</div>
+                      <button onClick={() => handleDeleteLocation(loc.id)} className="text-red-400"><Trash2 size={16}/></button>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              {/* GESTIÓN DE RESEÑAS */}
+              <section className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
+                <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2"><Star size={18}/> Reseñas de Clientes</h3>
+                <div className="space-y-2 max-h-60 overflow-y-auto">
+                  {cmsData.testimonials && cmsData.testimonials.map(t => (
+                    <div key={t.id} className="flex justify-between items-center text-sm border-b py-2">
+                      <div className="truncate pr-2"><span className="font-bold">{t.name}:</span> "{t.text}" ({t.stars}★)</div>
+                      <button onClick={() => handleDeleteTestimonial(t.id)} className="text-red-400"><Trash2 size={16}/></button>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <section className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
+                <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2"><Tag size={18}/> Ofertas</h3>
+                <div className="bg-gray-50 p-3 rounded-lg mb-4">
+                  <div className="grid grid-cols-2 gap-2 mb-2">
+                    <input type="text" placeholder="Título" className="p-2 border rounded text-sm" value={newOffer.title} onChange={e => setNewOffer({...newOffer, title: e.target.value})} />
+                    <input type="number" placeholder="Precio" className="p-2 border rounded text-sm" value={newOffer.price} onChange={e => setNewOffer({...newOffer, price: e.target.value})} />
+                  </div>
+                  <input type="text" placeholder="Descripción" className="w-full p-2 border rounded text-sm mb-2" value={newOffer.desc} onChange={e => setNewOffer({...newOffer, desc: e.target.value})} />
+                  <button onClick={handleAddOffer} className="w-full bg-blue-600 text-white font-bold py-2 rounded text-sm">Agregar Oferta</button>
+                </div>
+                <div className="space-y-2">
+                  {cmsData.offers.map(offer => (
+                    <div key={offer.id} className="flex justify-between items-center text-sm border-b py-2">
+                      <div><span className="font-bold">{offer.title}</span> - ${offer.price}</div>
+                      <button onClick={() => handleDeleteOffer(offer.id)} className="text-red-400"><Trash2 size={16}/></button>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <section className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
+                <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2"><Instagram size={18}/> Galería</h3>
+                <div className="bg-gray-50 p-3 rounded-lg border mb-4">
+                   <div className="flex gap-2 mb-2">
+                     <button onClick={() => setNewGalleryItem({...newGalleryItem, type: 'image'})} className={`flex-1 text-xs py-1 rounded font-bold ${newGalleryItem.type === 'image' ? 'bg-black text-white' : 'bg-gray-200'}`}>FOTO</button>
+                     <button onClick={() => setNewGalleryItem({...newGalleryItem, type: 'reel'})} className={`flex-1 text-xs py-1 rounded font-bold ${newGalleryItem.type === 'reel' ? 'bg-pink-600 text-white' : 'bg-gray-200'}`}>REEL</button>
+                   </div>
+                   <input type="text" className="w-full p-2 border rounded text-sm mb-2" placeholder="URL (Imagen o Reel Link)" value={newGalleryItem.url} onChange={e => setNewGalleryItem({...newGalleryItem, url: e.target.value})} />
+                   <button onClick={handleAddGalleryItem} className="bg-black text-white px-4 py-2 rounded font-bold w-full text-xs">AGREGAR</button>
+                </div>
+                <div className="grid grid-cols-4 gap-2">
+                  {cmsData.gallery && cmsData.gallery.map(item => (
+                    <div key={item.id} className="relative group h-16 bg-gray-100 rounded overflow-hidden">
+                      {item.type === 'reel' ? <div className="flex items-center justify-center h-full"><Video size={16}/></div> : <img src={item.url} className="w-full h-full object-cover"/>}
+                      <button onClick={() => handleDeleteGalleryItem(item.id)} className="absolute top-0 right-0 bg-red-500 text-white p-1"><X size={10}/></button>
+                    </div>
+                  ))}
+                </div>
+              </section>
             </div>
           )}
 
@@ -659,7 +848,7 @@ export default function App() {
     );
   }
 
-  // --- BOOKING (CLIENTE) ---
+  // --- VISTA 4: RESERVA (CLIENTE) ---
   if (view === 'booking') {
     const activeBarbers = users.filter(u => u.role === 'barber');
     
@@ -688,7 +877,7 @@ export default function App() {
               <h3 className="text-xl font-bold text-gray-800">Elige Profesional</h3>
               {activeBarbers.map(barber => (
                 <button key={barber.id} onClick={() => { setReservation({...reservation, barber}); setBookingStep(2); }} className="w-full bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex items-center gap-4 text-left group active:scale-95 transition">
-                  <img src={barber.photo} className="w-16 h-16 rounded-full bg-gray-200 object-cover group-hover:scale-105 transition" />
+                  <img src={barber.photo} className="w-16 h-16 rounded-full bg-gray-200 object-cover group-hover:scale-105 transition shadow-sm" />
                   <div><p className="font-bold text-lg text-gray-900">{barber.name}</p><p className="text-sm text-gray-500">{barber.services.length} Servicios</p></div>
                   <ChevronRight className="ml-auto text-gray-300 group-hover:text-black"/>
                 </button>
@@ -710,13 +899,7 @@ export default function App() {
               <h3 className="text-xl font-bold text-gray-800">Elige Fecha y Hora</h3>
               <div>
                 <label className="block text-xs font-bold uppercase text-gray-500 mb-1">Día</label>
-                <input 
-                  type="date" 
-                  className="w-full p-4 border rounded-xl bg-white text-lg font-bold outline-none focus:border-black text-gray-900" 
-                  style={{ colorScheme: 'light' }} 
-                  min={new Date().toISOString().split('T')[0]} 
-                  onChange={e => setReservation({...reservation, date: e.target.value, time: ''})} 
-                />
+                <input type="date" className="w-full p-4 border rounded-xl bg-white text-lg font-bold outline-none focus:border-black text-gray-900" style={{ colorScheme: 'light' }} min={new Date().toISOString().split('T')[0]} onChange={e => setReservation({...reservation, date: e.target.value, time: ''})} />
               </div>
               {reservation.date && (
                 <div className="grid grid-cols-3 gap-3 animate-fade-in">
