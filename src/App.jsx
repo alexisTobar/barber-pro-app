@@ -4,7 +4,7 @@ import {
   CreditCard, ChevronRight, ArrowLeft, Plus, Trash2, Lock, 
   MessageCircle, AlertTriangle, Camera, Instagram, MapPin, 
   Tag, Globe, Edit3, Video, Image as ImageIcon, Database,
-  Star, Quote, Layout, Landmark, Check, ExternalLink
+  Star, Quote, Layout, Landmark, Check, Filter, DollarSign
 } from 'lucide-react';
 
 import { db } from './firebase';
@@ -34,7 +34,6 @@ const DEFAULT_CMS_DATA = {
   offers: []
 };
 
-// --- USUARIOS BASE ---
 const SEED_USERS = [
   {
     name: "Dueño / Admin", username: "admin", password: "123", role: "admin",
@@ -42,11 +41,7 @@ const SEED_USERS = [
   },
   { 
     name: 'Dani "El Mago"', username: "dani", password: "123", role: "barber",
-    photo: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix', phone: "56911111111",
-    bank: {
-      name: "Daniel Mago", rut: "15.111.111-1", bankName: "Banco Estado",
-      type: "Cuenta RUT", number: "15111111", email: "dani@barber.cl"
-    },
+    photo: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix', phone: "56911111111", 
     services: [{ id: 101, name: 'Corte Degradado', price: 12000 }, { id: 102, name: 'Barba Terapia', price: 15000 }]
   }
 ];
@@ -63,26 +58,24 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState(null);
   const [loginForm, setLoginForm] = useState({ user: '', pass: '', error: '' });
 
-  // Admin States
-  const [adminTab, setAdminTab] = useState('agenda');
-  const [newBarber, setNewBarber] = useState({ 
-    name: '', username: '', password: '', photo: '', phone: '',
-    bankName: '', bankRut: '', bankBank: '', bankType: '', bankNumber: '', bankEmail: ''
-  });
+  // Admin/Barber States
+  const [adminTab, setAdminTab] = useState('agenda'); // agenda, team, website
+  const [agendaMode, setAgendaMode] = useState('daily'); // 'daily' (por dia), 'pending' (por cobrar)
+  const [filterDate, setFilterDate] = useState(new Date().toISOString().split('T')[0]); // Fecha seleccionada (Default HOY)
+
+  const [newBarber, setNewBarber] = useState({ name: '', username: '', password: '', photo: '', phone: '', bankName: '', bankRut: '', bankBank: '', bankType: '', bankNumber: '', bankEmail: '' });
   const [newOffer, setNewOffer] = useState({ title: '', price: '', desc: '' });
   const [newGalleryItem, setNewGalleryItem] = useState({ type: 'image', url: '', link: '' });
   const [newTestimonial, setNewTestimonial] = useState({ name: '', text: '' });
   const [newShopPhoto, setNewShopPhoto] = useState('');
-
-  // Barber States
   const [newService, setNewService] = useState({ name: '', price: '' });
+  
   const [cancelReason, setCancelReason] = useState('');
   const [apptToCancel, setApptToCancel] = useState(null);
 
   // Client States
   const [bookingStep, setBookingStep] = useState(1);
   const [reservation, setReservation] = useState({ barber: null, service: null, date: '', time: '', client: '', phone: '' });
-  // Nuevo estado para la pantalla final de éxito
   const [lastBookingData, setLastBookingData] = useState(null); 
 
   // =============================================================
@@ -147,7 +140,6 @@ export default function App() {
     setCmsData(newData);
     saveCms(newData);
   };
-
   const handleAddOffer = (e) => {
     e.preventDefault();
     if(!newOffer.title) return;
@@ -156,7 +148,6 @@ export default function App() {
     setNewOffer({ title: '', price: '', desc: '' });
   };
   const handleDeleteOffer = (id) => handleUpdateCms('offers', cmsData.offers.filter(o => o.id !== id));
-
   const handleAddGalleryItem = () => {
     if(!newGalleryItem.url) return;
     const linkToUse = newGalleryItem.link || (newGalleryItem.type === 'reel' ? newGalleryItem.url : cmsData.instagramLink);
@@ -165,7 +156,6 @@ export default function App() {
     setNewGalleryItem({ type: 'image', url: '', link: '' });
   };
   const handleDeleteGalleryItem = (id) => handleUpdateCms('gallery', cmsData.gallery.filter(i => i.id !== id));
-
   const handleAddTestimonial = (e) => {
     e.preventDefault();
     if(!newTestimonial.name) return;
@@ -174,7 +164,6 @@ export default function App() {
     setNewTestimonial({ name: '', text: '' });
   };
   const handleDeleteTestimonial = (id) => handleUpdateCms('testimonials', cmsData.testimonials.filter(t => t.id !== id));
-
   const handleAddShopPhoto = () => {
     if(!newShopPhoto) return;
     const updated = [...(cmsData.shopPhotos || []), { id: Date.now(), url: newShopPhoto }];
@@ -184,7 +173,7 @@ export default function App() {
   const handleDeleteShopPhoto = (id) => handleUpdateCms('shopPhotos', cmsData.shopPhotos.filter(p => p.id !== id));
 
   // =============================================================
-  // GESTIÓN
+  // GESTIÓN Y CITAS
   // =============================================================
   const handleLogin = (e) => {
     e.preventDefault();
@@ -198,7 +187,6 @@ export default function App() {
     }
   };
 
-  // CLIENTE: SOLICITUD DE RESERVA (AHORA CON PASO FINAL SEPARADO)
   const requestReservation = async () => {
     await addDoc(collection(db, "appointments"), {
       barberId: reservation.barber.id,
@@ -212,15 +200,13 @@ export default function App() {
       deposit: { paid: false, method: 'Transferencia' }
     });
     
-    // PREPARAR DATOS PARA LA PANTALLA DE ÉXITO
     const msg = `Hola ${reservation.barber.name} 👋, soy ${reservation.client}. Acabo de transferir el abono para mi cita: *${reservation.service.name}* el ${reservation.date} a las ${reservation.time}. Aquí te envío el comprobante (Foto). Quedo atento a tu confirmación.`;
     const link = `https://wa.me/${reservation.barber.phone}?text=${encodeURIComponent(msg)}`;
 
     setLastBookingData({ waLink: link });
-    setBookingStep(5); // IR A PANTALLA DE ÉXITO
+    setBookingStep(5); 
   };
 
-  // BARBERO: CONFIRMAR PAGO
   const confirmPayment = async (apptId) => {
     if(window.confirm("¿Confirmas que recibiste el abono?")) {
       await updateDoc(doc(db, "appointments", apptId), { 
@@ -230,17 +216,13 @@ export default function App() {
     }
   };
 
-  // CANCELACIÓN (AHORA FUNCIONA SIEMPRE)
   const confirmCancellation = async () => {
     if (!cancelReason) return alert("Escribe un motivo");
     await updateDoc(doc(db, "appointments", apptToCancel.id), { status: 'cancelled' });
-    
     let cleanPhone = apptToCancel.phone.replace(/\D/g, ''); 
-    if (cleanPhone.length >= 8 && !cleanPhone.startsWith('56')) cleanPhone = '56' + cleanPhone; 
-    
+    if (cleanPhone.length >= 8 && !cleanPhone.startsWith('56')) cleanPhone = '569' + cleanPhone; 
     const message = `Hola ${apptToCancel.clientName}. Cancelamos tu cita: ${cancelReason}.`;
     window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`, '_blank');
-    
     setApptToCancel(null);
     setCancelReason('');
   };
@@ -249,7 +231,6 @@ export default function App() {
     e.preventDefault();
     if (!newBarber.name) return;
     const photoUrl = newBarber.photo.trim() || `https://api.dicebear.com/7.x/avataaars/svg?seed=${newBarber.username}`;
-    
     const newUser = { 
       role: 'barber', 
       name: newBarber.name,
@@ -258,16 +239,11 @@ export default function App() {
       phone: newBarber.phone,
       photo: photoUrl, 
       bank: {
-        name: newBarber.bankName,
-        rut: newBarber.bankRut,
-        bankName: newBarber.bankBank,
-        type: newBarber.bankType,
-        number: newBarber.bankNumber,
-        email: newBarber.bankEmail
+        name: newBarber.bankName, rut: newBarber.bankRut, bankName: newBarber.bankBank,
+        type: newBarber.bankType, number: newBarber.bankNumber, email: newBarber.bankEmail
       },
       services: [] 
     };
-
     await addDoc(collection(db, "users"), newUser);
     setNewBarber({ name: '', username: '', password: '', photo: '', phone: '', bankName: '', bankRut: '', bankBank: '', bankType: '', bankNumber: '', bankEmail: '' });
     alert("Barbero creado");
@@ -314,15 +290,9 @@ export default function App() {
           </nav>
 
           <div className="flex-1 flex flex-col items-center justify-center text-center p-6 mt-10">
-            <h1 className="text-5xl md:text-7xl font-black mb-6 uppercase leading-none tracking-tighter animate-fade-in-up text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 via-yellow-500 to-yellow-600 drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">
-              {cmsData.heroTitle}
-            </h1>
-            <p className="text-gray-200 mb-12 text-lg max-w-2xl mx-auto animate-fade-in-up delay-100 font-light drop-shadow-md">
-              {cmsData.heroSubtitle}
-            </p>
-            <button onClick={() => setView('booking')} className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-black font-black py-5 px-12 rounded-full text-xl hover:from-yellow-400 hover:to-yellow-500 transition transform hover:scale-105 shadow-[0_0_30px_rgba(234,179,8,0.6)] active:scale-95 flex flex-row items-center justify-center gap-3">
-              <Calendar size={24} /> <span>RESERVAR AHORA</span>
-            </button>
+            <h1 className="text-5xl md:text-7xl font-black mb-6 uppercase leading-none tracking-tighter animate-fade-in-up text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 via-yellow-500 to-yellow-600 drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">{cmsData.heroTitle}</h1>
+            <p className="text-gray-200 mb-12 text-lg max-w-2xl mx-auto animate-fade-in-up delay-100 font-light drop-shadow-md">{cmsData.heroSubtitle}</p>
+            <button onClick={() => setView('booking')} className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-black font-black py-5 px-12 rounded-full text-xl hover:from-yellow-400 hover:to-yellow-500 transition transform hover:scale-105 shadow-[0_0_30px_rgba(234,179,8,0.6)] active:scale-95 flex flex-row items-center justify-center gap-3"><Calendar size={24} /> <span>RESERVAR AHORA</span></button>
           </div>
 
           {cmsData.offers && cmsData.offers.length > 0 && (
@@ -375,9 +345,7 @@ export default function App() {
                 <div className="space-y-4">
                   {cmsData.testimonials && cmsData.testimonials.map(t => (
                     <div key={t.id} className="bg-zinc-800 p-5 rounded-xl shadow-sm border border-white/5">
-                      <div className="flex text-yellow-500 mb-2 gap-1">
-                        {[...Array(t.stars)].map((_, i) => <Star key={i} size={14} fill="currentColor" />)}
-                      </div>
+                      <div className="flex text-yellow-500 mb-2 gap-1">{[...Array(t.stars)].map((_, i) => <Star key={i} size={14} fill="currentColor" />)}</div>
                       <p className="text-gray-300 italic text-sm mb-3">"{t.text}"</p>
                       <p className="text-xs font-bold text-white uppercase tracking-wide">- {t.name}</p>
                     </div>
@@ -393,14 +361,9 @@ export default function App() {
                 <h3 className="text-4xl font-black mb-6 uppercase text-white">Ubicación</h3>
                 <div className="flex items-center gap-4 mb-8">
                   <div className="bg-yellow-600 p-3 rounded-full text-white"><MapPin size={24} /></div>
-                  <div>
-                    <p className="text-gray-400 text-sm uppercase font-bold tracking-wider">Te esperamos en</p>
-                    <p className="text-2xl font-bold text-white">{cmsData.address}</p>
-                  </div>
+                  <div><p className="text-gray-400 text-sm uppercase font-bold tracking-wider">Te esperamos en</p><p className="text-2xl font-bold text-white">{cmsData.address}</p></div>
                 </div>
-                <button onClick={() => setView('booking')} className="bg-white text-black px-10 py-4 rounded-xl font-black hover:bg-gray-200 transition shadow-[0_0_20px_rgba(255,255,255,0.3)]">
-                  AGENDAR VISITA
-                </button>
+                <button onClick={() => setView('booking')} className="bg-white text-black px-10 py-4 rounded-xl font-black hover:bg-gray-200 transition shadow-[0_0_20px_rgba(255,255,255,0.3)]">AGENDAR VISITA</button>
               </div>
               <div className="h-72 md:h-96 rounded-3xl overflow-hidden shadow-2xl border border-white/20 grayscale hover:grayscale-0 transition duration-500">
                 <iframe src={cmsData.mapUrl} width="100%" height="100%" style={{ border: 0 }} allowFullScreen="" loading="lazy"></iframe>
@@ -461,7 +424,20 @@ export default function App() {
 
   // --- PANELES ---
   if (view === 'admin-panel' || view === 'barber-panel') {
+    // FILTRADO INTELIGENTE (LA MEJORA CLAVE)
     const visibleAppts = currentUser.role === 'admin' ? appointments : appointments.filter(a => a.barberId === currentUser.id);
+    
+    // Filtros aplicados
+    let filteredAppts = visibleAppts.filter(a => a.status !== 'cancelled');
+    
+    if (agendaMode === 'daily') {
+      filteredAppts = filteredAppts.filter(a => a.date === filterDate);
+    } else if (agendaMode === 'pending') {
+      filteredAppts = filteredAppts.filter(a => a.status === 'pending');
+    }
+
+    // Contadores para las pestañas
+    const pendingCount = visibleAppts.filter(a => a.status === 'pending').length;
 
     return (
       <div className="min-h-screen bg-gray-100 pb-20">
@@ -482,44 +458,82 @@ export default function App() {
         )}
 
         <main className="p-4 space-y-6 max-w-3xl mx-auto">
-          {/* AGENDA */}
+          {/* TAB: AGENDA (CON NUEVOS FILTROS) */}
           {(adminTab === 'agenda' || currentUser.role === 'barber') && (
-            <div className="space-y-3">
-              {visibleAppts.length === 0 ? <div className="text-center py-8 text-gray-400">Sin citas activas</div> : 
-                visibleAppts.filter(a => a.status !== 'cancelled').map(app => (
-                  <div key={app.id} className={`bg-white p-4 rounded-xl shadow-sm border-l-4 relative ${app.status === 'confirmed' ? 'border-green-500' : 'border-yellow-400'}`}>
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h4 className="font-bold text-gray-900 text-lg">{app.clientName}</h4>
-                        <p className="text-sm text-blue-600 font-medium">{app.serviceName}</p>
-                        <p className="text-xs text-gray-400 flex items-center gap-1 mt-1"><Phone size={12}/> {app.phone}</p>
-                        {app.status === 'pending' && <p className="text-xs text-yellow-600 font-bold bg-yellow-100 px-2 py-1 rounded inline-block mt-2">⏳ Pendiente Pago</p>}
-                      </div>
-                      <div className="text-right">
-                        <span className="block text-2xl font-bold">{app.time}</span>
-                        <span className="text-xs bg-gray-100 px-2 py-1 rounded font-bold">{app.date}</span>
-                      </div>
-                    </div>
-                    
-                    <div className="flex gap-2 mt-4">
-                      {app.status === 'pending' && (
-                        <button onClick={() => confirmPayment(app.id)} className="flex-1 bg-green-500 text-white py-2 rounded-lg font-bold flex items-center justify-center gap-1 shadow hover:bg-green-600">
-                          <Check size={16}/> Confirmar Pago
-                        </button>
-                      )}
-                      
-                      {/* BOTÓN CANCELAR SIEMPRE VISIBLE */}
-                      <button onClick={() => setApptToCancel(app)} className="flex-1 border border-red-100 text-red-500 py-2 rounded-lg font-bold flex items-center justify-center gap-1 hover:bg-red-50">
-                        <X size={16}/> Cancelar
-                      </button>
-                    </div>
+            <div className="space-y-4">
+              
+              {/* FILTROS INTELIGENTES */}
+              <div className="bg-white p-2 rounded-xl shadow-sm flex flex-col gap-2">
+                <div className="flex gap-2">
+                  <button onClick={() => setAgendaMode('daily')} className={`flex-1 py-2 text-xs font-bold rounded-lg ${agendaMode === 'daily' ? 'bg-black text-white' : 'bg-gray-100 text-gray-500'}`}>
+                    <Calendar size={14} className="inline mr-1"/> Calendario
+                  </button>
+                  <button onClick={() => setAgendaMode('pending')} className={`flex-1 py-2 text-xs font-bold rounded-lg relative ${agendaMode === 'pending' ? 'bg-yellow-500 text-black' : 'bg-gray-100 text-gray-500'}`}>
+                    <DollarSign size={14} className="inline mr-1"/> Por Cobrar
+                    {pendingCount > 0 && <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center">{pendingCount}</span>}
+                  </button>
+                </div>
+
+                {/* SELECTOR DE FECHA (SOLO EN MODO DIARIO) */}
+                {agendaMode === 'daily' && (
+                  <div className="flex gap-2 items-center bg-gray-50 p-2 rounded-lg border border-gray-100">
+                    <button onClick={() => setFilterDate(new Date().toISOString().split('T')[0])} className="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded hover:bg-blue-100">HOY</button>
+                    <button onClick={() => {
+                      const d = new Date(); d.setDate(d.getDate() + 1);
+                      setFilterDate(d.toISOString().split('T')[0]);
+                    }} className="text-xs font-bold text-gray-500 bg-white border px-3 py-1 rounded hover:bg-gray-100">MAÑANA</button>
+                    <input 
+                      type="date" 
+                      className="flex-1 bg-transparent text-sm font-bold text-gray-700 outline-none text-right"
+                      value={filterDate}
+                      onChange={(e) => setFilterDate(e.target.value)}
+                    />
                   </div>
-                ))
-              }
+                )}
+              </div>
+
+              {/* LISTA DE CITAS FILTRADAS */}
+              <div className="space-y-3">
+                {filteredAppts.length === 0 ? 
+                  <div className="text-center py-12 text-gray-400 bg-white rounded-xl border border-dashed flex flex-col items-center">
+                    <Calendar size={40} className="mb-2 opacity-20"/>
+                    <p>No hay citas {agendaMode === 'daily' ? 'para este día' : 'pendientes de pago'}</p>
+                  </div> 
+                : 
+                  filteredAppts.map(app => (
+                    <div key={app.id} className={`bg-white p-4 rounded-xl shadow-sm border-l-4 relative ${app.status === 'confirmed' ? 'border-green-500' : 'border-yellow-400'}`}>
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h4 className="font-bold text-gray-900 text-lg">{app.clientName}</h4>
+                          <p className="text-sm text-blue-600 font-medium">{app.serviceName}</p>
+                          <p className="text-xs text-gray-400 flex items-center gap-1 mt-1"><Phone size={12}/> {app.phone}</p>
+                          <p className="text-xs text-gray-400 mt-1 font-bold bg-gray-100 px-2 py-0.5 rounded inline-block">{app.date}</p>
+                          {app.status === 'pending' && <p className="text-xs text-yellow-600 font-bold bg-yellow-100 px-2 py-1 rounded inline-block mt-2 ml-2">⏳ Pendiente Pago</p>}
+                        </div>
+                        <div className="text-right">
+                          <span className="block text-2xl font-bold">{app.time}</span>
+                          <span className="text-sm font-bold text-green-600">${app.price}</span>
+                        </div>
+                      </div>
+                      
+                      <div className="flex gap-2 mt-4">
+                        {app.status === 'pending' && (
+                          <button onClick={() => confirmPayment(app.id)} className="flex-1 bg-green-500 text-white py-2 rounded-lg font-bold flex items-center justify-center gap-1 shadow hover:bg-green-600">
+                            <Check size={16}/> Confirmar Pago
+                          </button>
+                        )}
+                        <button onClick={() => setApptToCancel(app)} className="flex-1 border border-red-100 text-red-500 py-2 rounded-lg font-bold flex items-center justify-center gap-1 hover:bg-red-50">
+                          <X size={16}/> Cancelar
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                }
+              </div>
             </div>
           )}
 
-          {/* EQUIPO (ADMIN) */}
+          {/* TAB: EQUIPO (ADMIN) */}
           {currentUser.role === 'admin' && adminTab === 'team' && (
             <section className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
               <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2"><User size={20} className="text-blue-600"/> Gestión de Equipo</h3>
@@ -571,7 +585,6 @@ export default function App() {
           {/* TAB: WEB CMS */}
           {currentUser.role === 'admin' && adminTab === 'website' && (
             <div className="space-y-6">
-              {/* Textos y Ubicación omitidos por brevedad, igual que antes */}
               <section className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
                 <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2"><Edit3 size={18}/> Textos Portada</h3>
                 <div className="space-y-3">
@@ -579,7 +592,94 @@ export default function App() {
                   <textarea className="w-full p-2 border rounded h-20" value={cmsData.heroSubtitle} onChange={(e) => handleUpdateCms('heroSubtitle', e.target.value)} />
                 </div>
               </section>
-              {/* Resto de secciones CMS iguales... */}
+
+              <section className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
+                <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2"><Layout size={18}/> Sobre Nosotros y Local</h3>
+                <div className="space-y-3 mb-4">
+                  <input type="text" className="w-full p-2 border rounded font-bold" placeholder="Título (Ej: Más que una barbería)" value={cmsData.aboutTitle} onChange={(e) => handleUpdateCms('aboutTitle', e.target.value)} />
+                  <textarea className="w-full p-2 border rounded h-20" placeholder="Descripción del local..." value={cmsData.aboutText} onChange={(e) => handleUpdateCms('aboutText', e.target.value)} />
+                </div>
+                
+                <div className="bg-gray-50 p-3 rounded-lg border mb-3">
+                   <p className="text-xs font-bold text-gray-400 mb-2 uppercase">Agregar Foto del Local</p>
+                   <div className="flex gap-2">
+                     <input type="text" className="flex-1 p-2 border rounded text-sm" placeholder="URL Foto" value={newShopPhoto} onChange={e => setNewShopPhoto(e.target.value)} />
+                     <button onClick={handleAddShopPhoto} className="bg-blue-600 text-white px-4 rounded font-bold text-sm">+</button>
+                   </div>
+                </div>
+                <div className="grid grid-cols-4 gap-2">
+                  {cmsData.shopPhotos && cmsData.shopPhotos.map(p => (
+                    <div key={p.id} className="relative group h-16"><img src={p.url} className="w-full h-full object-cover rounded"/><button onClick={() => handleDeleteShopPhoto(p.id)} className="absolute top-0 right-0 bg-red-500 text-white p-1 rounded-bl"><X size={10}/></button></div>
+                  ))}
+                </div>
+              </section>
+
+              <section className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
+                <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2"><Star size={18}/> Testimonios Clientes</h3>
+                <div className="bg-gray-50 p-3 rounded-lg border mb-4">
+                   <div className="grid grid-cols-3 gap-2 mb-2">
+                     <input type="text" className="col-span-1 p-2 border rounded text-sm" placeholder="Nombre" value={newTestimonial.name} onChange={e => setNewTestimonial({...newTestimonial, name: e.target.value})} />
+                     <input type="text" className="col-span-2 p-2 border rounded text-sm" placeholder="Comentario" value={newTestimonial.text} onChange={e => setNewTestimonial({...newTestimonial, text: e.target.value})} />
+                   </div>
+                   <button onClick={handleAddTestimonial} className="w-full bg-black text-white py-2 rounded text-sm font-bold">Agregar Testimonio</button>
+                </div>
+                <div className="space-y-2">
+                  {cmsData.testimonials && cmsData.testimonials.map(t => (
+                    <div key={t.id} className="flex justify-between items-center text-sm border-b py-2">
+                      <div className="truncate pr-2"><span className="font-bold">{t.name}:</span> "{t.text}"</div>
+                      <button onClick={() => handleDeleteTestimonial(t.id)} className="text-red-400"><Trash2 size={16}/></button>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <section className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
+                <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2"><MapPin size={18}/> Ubicación</h3>
+                <div className="space-y-3">
+                  <input type="text" className="w-full p-2 border rounded" value={cmsData.address} onChange={(e) => handleUpdateCms('address', e.target.value)} />
+                  <input type="text" className="w-full p-2 border rounded text-xs text-gray-500" value={cmsData.mapUrl} onChange={(e) => handleUpdateCms('mapUrl', e.target.value)} />
+                </div>
+              </section>
+
+              <section className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
+                <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2"><Tag size={18}/> Ofertas</h3>
+                <div className="bg-gray-50 p-3 rounded-lg mb-4">
+                  <div className="grid grid-cols-2 gap-2 mb-2">
+                    <input type="text" placeholder="Título" className="p-2 border rounded text-sm" value={newOffer.title} onChange={e => setNewOffer({...newOffer, title: e.target.value})} />
+                    <input type="number" placeholder="Precio" className="p-2 border rounded text-sm" value={newOffer.price} onChange={e => setNewOffer({...newOffer, price: e.target.value})} />
+                  </div>
+                  <input type="text" placeholder="Descripción" className="w-full p-2 border rounded text-sm mb-2" value={newOffer.desc} onChange={e => setNewOffer({...newOffer, desc: e.target.value})} />
+                  <button onClick={handleAddOffer} className="w-full bg-blue-600 text-white font-bold py-2 rounded text-sm">Agregar Oferta</button>
+                </div>
+                <div className="space-y-2">
+                  {cmsData.offers.map(offer => (
+                    <div key={offer.id} className="flex justify-between items-center text-sm border-b py-2">
+                      <div><span className="font-bold">{offer.title}</span> - ${offer.price}</div>
+                      <button onClick={() => handleDeleteOffer(offer.id)} className="text-red-400"><Trash2 size={16}/></button>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <section className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
+                <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2"><Instagram size={18}/> Galería (Fotos & Reels)</h3>
+                <div className="bg-gray-50 p-3 rounded-lg border mb-4">
+                   <div className="flex gap-2 mb-2">
+                     <button onClick={() => setNewGalleryItem({...newGalleryItem, type: 'image'})} className={`flex-1 text-xs py-1 rounded font-bold ${newGalleryItem.type === 'image' ? 'bg-black text-white' : 'bg-gray-200'}`}>FOTO</button>
+                     <button onClick={() => setNewGalleryItem({...newGalleryItem, type: 'reel'})} className={`flex-1 text-xs py-1 rounded font-bold ${newGalleryItem.type === 'reel' ? 'bg-pink-600 text-white' : 'bg-gray-200'}`}>REEL</button>
+                   </div>
+                   <input type="text" className="w-full p-2 border rounded text-sm mb-2" placeholder="URL (Imagen o Reel Link)" value={newGalleryItem.url} onChange={e => setNewGalleryItem({...newGalleryItem, url: e.target.value})} />
+                   <button onClick={handleAddGalleryItem} className="bg-black text-white px-4 py-2 rounded font-bold w-full text-xs">AGREGAR</button>
+                </div>
+                <div className="grid grid-cols-4 gap-2">
+                  {cmsData.gallery && cmsData.gallery.map(item => (
+                    <div key={item.id} className="relative group h-16 bg-gray-100 rounded overflow-hidden">
+                      {item.type === 'reel' ? <div className="flex items-center justify-center h-full"><Video size={16}/></div> : <img src={item.url} className="w-full h-full object-cover"/>}
+                      <button onClick={() => handleDeleteGalleryItem(item.id)} className="absolute top-0 right-0 bg-red-500 text-white p-1"><X size={10}/></button>
+                    </div>
+                  ))}
+                </div>
+              </section>
             </div>
           )}
 
@@ -620,6 +720,7 @@ export default function App() {
     );
   }
 
+  // --- BOOKING ---
   if (view === 'booking') {
     const activeBarbers = users.filter(u => u.role === 'barber');
     
@@ -687,7 +788,7 @@ export default function App() {
                 <input 
                   type="date" 
                   className="w-full p-4 border rounded-xl bg-white text-lg font-bold outline-none focus:border-black text-gray-900" 
-                  style={{ colorScheme: 'light' }} // FIX PARA MÓVILES
+                  style={{ colorScheme: 'light' }} 
                   min={new Date().toISOString().split('T')[0]} 
                   onChange={e => setReservation({...reservation, date: e.target.value, time: ''})} 
                 />
@@ -727,12 +828,17 @@ export default function App() {
                       <p><span className="font-bold">N°:</span> {reservation.barber.bank.number}</p>
                       <p><span className="font-bold">Correo:</span> {reservation.barber.bank.email}</p>
                     </>
-                  ) : <p className="italic text-gray-500">Sin datos bancarios.</p>}
+                  ) : <p className="italic text-gray-500">Sin datos bancarios configurados.</p>}
                 </div>
               </div>
 
+              <div className="bg-yellow-50 p-4 rounded-xl border border-yellow-200 flex gap-3 items-start">
+                 <AlertTriangle className="text-yellow-600 shrink-0" size={20} />
+                 <div><p className="text-yellow-800 font-bold text-sm">Abono Requerido</p><p className="text-yellow-700 text-xs mt-1">Transfiere el monto y envía el comprobante.</p></div>
+              </div>
+
               <div className="space-y-3">
-                <input type="text" placeholder="Tu Nombre" className="w-full p-4 border rounded-xl" onChange={e => setReservation({...reservation, client: e.target.value})} />
+                <input type="text" placeholder="Tu Nombre Completo" className="w-full p-4 border rounded-xl" onChange={e => setReservation({...reservation, client: e.target.value})} />
                 <input type="tel" placeholder="Celular" className="w-full p-4 border rounded-xl" onChange={e => setReservation({...reservation, phone: e.target.value})} />
               </div>
               <button disabled={!reservation.client || !reservation.phone} onClick={requestReservation} className="w-full bg-green-600 text-white py-4 rounded-xl font-bold text-lg shadow-lg flex items-center justify-center gap-2">
