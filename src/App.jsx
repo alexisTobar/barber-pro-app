@@ -4,10 +4,9 @@ import {
   CreditCard, ChevronRight, ArrowLeft, Plus, Trash2, Lock, 
   MessageCircle, AlertTriangle, Camera, Instagram, MapPin, 
   Tag, Globe, Edit3, Video, Image as ImageIcon, Database,
-  Star, Quote, Layout, Map
+  Star, Quote, Layout
 } from 'lucide-react';
 
-// IMPORTAR FIREBASE
 import { db } from './firebase';
 import { 
   collection, addDoc, deleteDoc, updateDoc, doc, onSnapshot 
@@ -16,15 +15,15 @@ import {
 // --- DATOS POR DEFECTO (Se usan si la BD está vacía) ---
 const DEFAULT_CMS_DATA = {
   heroTitle: "Estilo Legendario",
-  heroSubtitle: "Agenda tu cita en segundos. Elige a tu profesional, abona seguro y confirma al instante.",
+  heroSubtitle: "Tu imagen es nuestra prioridad. Agenda en segundos con los mejores.",
   aboutTitle: "Más que una Barbería",
   aboutText: "En Barber Pro no solo cortamos cabello, creamos experiencias. Un ambiente relajado, buena música y los mejores profesionales de Talagante listos para asesorarte.",
   address: "Esmeralda 1062, Talagante",
   mapUrl: "https://maps.google.com/maps?q=Esmeralda+1062,+Talagante&t=&z=15&ie=UTF8&iwloc=&output=embed",
   instagramUser: "@BarberPro_Talagante",
   instagramLink: "https://instagram.com",
-  gallery: [], // Instagram/Reels
-  shopPhotos: [ // Fotos del Local
+  gallery: [],
+  shopPhotos: [
     { id: 1, url: "https://images.unsplash.com/photo-1503951914875-befbb711058c?auto=format&fit=crop&w=800&q=80" },
     { id: 2, url: "https://images.unsplash.com/photo-1621605815971-fbc98d665033?auto=format&fit=crop&w=800&q=80" }
   ],
@@ -69,8 +68,6 @@ export default function App() {
   const [newBarber, setNewBarber] = useState({ name: '', username: '', password: '', photo: '', phone: '' });
   const [newOffer, setNewOffer] = useState({ title: '', price: '', desc: '' });
   const [newGalleryItem, setNewGalleryItem] = useState({ type: 'image', url: '', link: '' });
-  
-  // NUEVOS ESTADOS ADMIN
   const [newTestimonial, setNewTestimonial] = useState({ name: '', text: '' });
   const [newShopPhoto, setNewShopPhoto] = useState('');
 
@@ -138,16 +135,14 @@ export default function App() {
   };
 
   // =============================================================
-  // MANEJADORES CMS (ACTUALIZADOS)
+  // MANEJADORES CMS
   // =============================================================
-  
   const handleUpdateCms = (field, value) => {
     const newData = { ...cmsData, [field]: value };
     setCmsData(newData);
     saveCms(newData);
   };
 
-  // OFERTAS
   const handleAddOffer = (e) => {
     e.preventDefault();
     if(!newOffer.title) return;
@@ -157,7 +152,6 @@ export default function App() {
   };
   const handleDeleteOffer = (id) => handleUpdateCms('offers', cmsData.offers.filter(o => o.id !== id));
 
-  // GALERÍA INSTAGRAM
   const handleAddGalleryItem = () => {
     if(!newGalleryItem.url) return;
     const linkToUse = newGalleryItem.link || (newGalleryItem.type === 'reel' ? newGalleryItem.url : cmsData.instagramLink);
@@ -167,7 +161,6 @@ export default function App() {
   };
   const handleDeleteGalleryItem = (id) => handleUpdateCms('gallery', cmsData.gallery.filter(i => i.id !== id));
 
-  // NUEVO: TESTIMONIOS
   const handleAddTestimonial = (e) => {
     e.preventDefault();
     if(!newTestimonial.name) return;
@@ -177,7 +170,6 @@ export default function App() {
   };
   const handleDeleteTestimonial = (id) => handleUpdateCms('testimonials', cmsData.testimonials.filter(t => t.id !== id));
 
-  // NUEVO: FOTOS DEL LOCAL
   const handleAddShopPhoto = () => {
     if(!newShopPhoto) return;
     const updated = [...(cmsData.shopPhotos || []), { id: Date.now(), url: newShopPhoto }];
@@ -186,9 +178,8 @@ export default function App() {
   };
   const handleDeleteShopPhoto = (id) => handleUpdateCms('shopPhotos', cmsData.shopPhotos.filter(p => p.id !== id));
 
-
   // =============================================================
-  // GESTIÓN USUARIOS / CITAS
+  // GESTIÓN
   // =============================================================
   const handleLogin = (e) => {
     e.preventDefault();
@@ -233,7 +224,6 @@ export default function App() {
     setCancelReason('');
   };
 
-  // Helpers para Admin de Barberos y Servicios
   const handleAddBarber = async (e) => {
     e.preventDefault();
     if (!newBarber.name) return;
@@ -260,50 +250,56 @@ export default function App() {
     const barbersList = users.filter(u => u.role === 'barber');
 
     return (
-      <div className="min-h-screen font-sans flex flex-col relative bg-black overflow-x-hidden text-white">
+      <div className="min-h-screen font-sans flex flex-col relative bg-zinc-950 overflow-x-hidden text-white">
         
-        {/* BACKGROUND */}
+        {/* HERO BACKGROUND */}
         <div className="absolute inset-0 z-0">
-          <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/50 to-black z-10"></div> 
-          <img src="https://images.unsplash.com/photo-1585747860715-2ba37e788b70?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80" className="w-full h-full object-cover opacity-50" alt="bg"/>
+          <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/60 to-zinc-950 z-10"></div> 
+          <img src="https://images.unsplash.com/photo-1585747860715-2ba37e788b70?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80" className="w-full h-full object-cover opacity-60" alt="bg"/>
         </div>
 
         <div className="relative z-20 flex flex-col min-h-screen">
-          
-          {/* BOTÓN WHATSAPP */}
           <a href={`https://wa.me/56900000000`} target="_blank" className="fixed bottom-6 right-6 bg-green-500 p-4 rounded-full shadow-lg z-50 hover:scale-110 transition animate-bounce">
             <MessageCircle size={28} color="white" />
           </a>
 
-          {/* NAVBAR */}
           <nav className="p-6 flex justify-between items-center border-b border-white/10 backdrop-blur-md">
             <div className="flex items-center gap-3">
-              <div className="bg-yellow-500 p-2 rounded-lg text-black"><Scissors size={24}/></div>
-              <span className="font-black text-2xl tracking-widest">BARBER PRO</span>
+              <div className="bg-yellow-500 p-2 rounded-lg text-black shadow-[0_0_15px_rgba(234,179,8,0.5)]"><Scissors size={24}/></div>
+              <span className="font-black text-2xl tracking-widest text-white">BARBER PRO</span>
             </div>
-            <button onClick={() => setView('login')} className="text-xs font-bold bg-white/10 py-2 px-4 rounded-full border border-white/10 flex items-center gap-2 hover:bg-white/20">
+            <button onClick={() => setView('login')} className="text-xs font-bold bg-white/10 py-2 px-4 rounded-full border border-white/10 flex items-center gap-2 hover:bg-white/20 transition">
               <Lock size={12} /> ADMIN
             </button>
           </nav>
 
-          {/* HERO */}
           <div className="flex-1 flex flex-col items-center justify-center text-center p-6 mt-10">
-            <h1 className="text-5xl md:text-7xl font-black mb-4 uppercase leading-none tracking-tighter animate-fade-in-up">{cmsData.heroTitle}</h1>
-            <p className="text-gray-300 mb-10 text-lg max-w-2xl mx-auto animate-fade-in-up delay-100">{cmsData.heroSubtitle}</p>
-            <button onClick={() => setView('booking')} className="bg-yellow-500 text-black font-black py-5 px-10 rounded-full text-xl hover:bg-yellow-400 transition transform hover:scale-105 shadow-glow animate-bounce">
-              <Calendar size={24} /> RESERVAR HORA
+            {/* TÍTULO DORADO PREMIUM */}
+            <h1 className="text-5xl md:text-7xl font-black mb-6 uppercase leading-none tracking-tighter animate-fade-in-up text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 via-yellow-500 to-yellow-600 drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">
+              {cmsData.heroTitle}
+            </h1>
+            <p className="text-gray-200 mb-12 text-lg max-w-2xl mx-auto animate-fade-in-up delay-100 font-light drop-shadow-md">
+              {cmsData.heroSubtitle}
+            </p>
+            
+            {/* BOTÓN CORREGIDO: FLEX ROW PARA ALINEAR ICONO Y TEXTO */}
+            <button 
+              onClick={() => setView('booking')} 
+              className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-black font-black py-5 px-12 rounded-full text-xl hover:from-yellow-400 hover:to-yellow-500 transition transform hover:scale-105 shadow-[0_0_30px_rgba(234,179,8,0.6)] active:scale-95 flex flex-row items-center justify-center gap-3"
+            >
+              <Calendar size={24} /> <span>RESERVAR AHORA</span>
             </button>
           </div>
 
           {/* OFERTAS */}
           {cmsData.offers && cmsData.offers.length > 0 && (
-            <section className="py-12 px-4 bg-white/5 backdrop-blur-sm border-y border-white/10">
+            <section className="py-12 px-4 bg-zinc-900/50 backdrop-blur-sm border-y border-white/10">
               <div className="max-w-6xl mx-auto">
                 <h3 className="text-center text-yellow-500 font-bold tracking-widest uppercase mb-8 flex items-center justify-center gap-2"><Tag size={20}/> Ofertas</h3>
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {cmsData.offers.map(offer => (
-                    <div key={offer.id} className="bg-black/50 border border-yellow-500/30 p-6 rounded-2xl relative overflow-hidden group hover:border-yellow-500 transition">
-                      <div className="absolute top-0 right-0 bg-yellow-500 text-black font-bold text-xs px-3 py-1 rounded-bl-xl">OFERTA</div>
+                    <div key={offer.id} className="bg-black/60 border border-yellow-500/20 p-6 rounded-2xl relative overflow-hidden group hover:border-yellow-500/50 transition">
+                      <div className="absolute top-0 right-0 bg-yellow-600 text-white font-bold text-xs px-3 py-1 rounded-bl-xl">OFERTA</div>
                       <h4 className="text-xl font-bold text-white mb-2">{offer.title}</h4>
                       <p className="text-gray-400 text-sm mb-4">{offer.desc}</p>
                       <p className="text-2xl font-black text-yellow-400">${offer.price}</p>
@@ -315,46 +311,46 @@ export default function App() {
           )}
 
           {/* EQUIPO */}
-          <section className="py-16 px-4">
+          <section className="py-20 px-4 bg-zinc-950">
             <div className="max-w-6xl mx-auto text-center">
-              <h3 className="text-3xl font-black text-white mb-10 uppercase">Nuestro Equipo</h3>
+              <h3 className="text-3xl font-black text-white mb-12 uppercase tracking-tight">Nuestro Equipo</h3>
               <div className="flex flex-wrap justify-center gap-8">
                 {barbersList.length === 0 ? <p className="text-gray-500">Cargando equipo...</p> : barbersList.map(barber => (
-                  <div key={barber.id} className="bg-white/5 p-6 rounded-3xl border border-white/10 w-64 hover:bg-white/10 transition cursor-pointer" onClick={() => setView('booking')}>
-                    <img src={barber.photo} className="w-24 h-24 rounded-full mx-auto mb-4 border-2 border-yellow-500 object-cover" />
-                    <h4 className="text-xl font-bold">{barber.name}</h4>
-                    <p className="text-yellow-500 text-sm">Barber Pro</p>
+                  <div key={barber.id} className="bg-zinc-900 p-6 rounded-3xl border border-white/5 w-64 hover:bg-zinc-800 transition cursor-pointer group" onClick={() => setView('booking')}>
+                    <img src={barber.photo} className="w-24 h-24 rounded-full mx-auto mb-4 border-2 border-yellow-600 object-cover group-hover:scale-110 transition" />
+                    <h4 className="text-xl font-bold text-white">{barber.name}</h4>
+                    <p className="text-yellow-600 text-sm font-bold mt-1">Barber Pro</p>
                   </div>
                 ))}
               </div>
             </div>
           </section>
 
-          {/* NUEVO: LA EXPERIENCIA (SOBRE NOSOTROS + FOTOS LOCAL) */}
-          <section className="py-16 bg-white text-black">
+          {/* SOBRE NOSOTROS (DARK MODE) */}
+          <section className="py-20 bg-zinc-900 text-white border-t border-white/5">
             <div className="max-w-6xl mx-auto px-4 grid md:grid-cols-2 gap-12 items-center">
               <div>
-                <h3 className="text-4xl font-black mb-6 uppercase">{cmsData.aboutTitle || "La Experiencia"}</h3>
-                <p className="text-gray-600 text-lg mb-8 leading-relaxed">
-                  {cmsData.aboutText || "Ven a vivir el mejor servicio de la zona."}
+                <h3 className="text-4xl font-black mb-6 uppercase text-yellow-500">{cmsData.aboutTitle}</h3>
+                <p className="text-gray-400 text-lg mb-8 leading-relaxed font-light">
+                  {cmsData.aboutText}
                 </p>
                 <div className="grid grid-cols-2 gap-4">
                   {cmsData.shopPhotos && cmsData.shopPhotos.map(photo => (
-                    <img key={photo.id} src={photo.url} className="w-full h-32 object-cover rounded-xl shadow-lg hover:scale-105 transition" />
+                    <img key={photo.id} src={photo.url} className="w-full h-32 object-cover rounded-xl shadow-lg border border-white/10 hover:opacity-80 transition" />
                   ))}
                 </div>
               </div>
-              <div className="bg-gray-100 p-8 rounded-3xl relative">
-                <Quote className="absolute top-4 left-4 text-yellow-500 opacity-20" size={60} />
-                <h4 className="text-2xl font-bold mb-6 text-center">Lo que dicen ellos</h4>
+              <div className="bg-black/40 p-8 rounded-3xl relative border border-white/5">
+                <Quote className="absolute top-6 left-6 text-yellow-600 opacity-20" size={60} />
+                <h4 className="text-2xl font-bold mb-8 text-center">Opiniones Reales</h4>
                 <div className="space-y-4">
                   {cmsData.testimonials && cmsData.testimonials.map(t => (
-                    <div key={t.id} className="bg-white p-4 rounded-xl shadow-sm">
-                      <div className="flex text-yellow-400 mb-2">
+                    <div key={t.id} className="bg-zinc-800 p-5 rounded-xl shadow-sm border border-white/5">
+                      <div className="flex text-yellow-500 mb-2 gap-1">
                         {[...Array(t.stars)].map((_, i) => <Star key={i} size={14} fill="currentColor" />)}
                       </div>
-                      <p className="text-gray-600 italic text-sm mb-2">"{t.text}"</p>
-                      <p className="text-xs font-bold text-gray-900">- {t.name}</p>
+                      <p className="text-gray-300 italic text-sm mb-3">"{t.text}"</p>
+                      <p className="text-xs font-bold text-white uppercase tracking-wide">- {t.name}</p>
                     </div>
                   ))}
                 </div>
@@ -362,29 +358,34 @@ export default function App() {
             </div>
           </section>
 
-          {/* UBICACIÓN & MAPA */}
-          <section className="py-16 bg-black border-t border-white/10">
-            <div className="max-w-6xl mx-auto px-4 grid md:grid-cols-2 gap-8 items-center">
+          {/* UBICACIÓN (DARK MODE) */}
+          <section className="py-20 bg-black border-t border-white/10">
+            <div className="max-w-6xl mx-auto px-4 grid md:grid-cols-2 gap-12 items-center">
               <div>
-                <h3 className="text-3xl font-black mb-4 uppercase text-white">Ubicación</h3>
-                <div className="flex items-center gap-3 mb-6">
-                  <MapPin className="text-yellow-600" size={30} />
-                  <p className="text-xl font-medium text-white">{cmsData.address}</p>
+                <h3 className="text-4xl font-black mb-6 uppercase text-white">Ubicación</h3>
+                <div className="flex items-center gap-4 mb-8">
+                  <div className="bg-yellow-600 p-3 rounded-full text-white"><MapPin size={24} /></div>
+                  <div>
+                    <p className="text-gray-400 text-sm uppercase font-bold tracking-wider">Te esperamos en</p>
+                    <p className="text-2xl font-bold text-white">{cmsData.address}</p>
+                  </div>
                 </div>
-                <button onClick={() => setView('booking')} className="bg-white text-black px-8 py-3 rounded-xl font-bold hover:bg-gray-200">Agendar Visita</button>
+                <button onClick={() => setView('booking')} className="bg-white text-black px-10 py-4 rounded-xl font-black hover:bg-gray-200 transition shadow-[0_0_20px_rgba(255,255,255,0.3)]">
+                  AGENDAR VISITA
+                </button>
               </div>
-              <div className="h-64 md:h-80 rounded-2xl overflow-hidden shadow-2xl border-2 border-white/20">
+              <div className="h-72 md:h-96 rounded-3xl overflow-hidden shadow-2xl border border-white/20 grayscale hover:grayscale-0 transition duration-500">
                 <iframe src={cmsData.mapUrl} width="100%" height="100%" style={{ border: 0 }} allowFullScreen="" loading="lazy"></iframe>
               </div>
             </div>
           </section>
 
           {/* GALERÍA INSTAGRAM */}
-          <section className="py-12 bg-black border-t border-white/10">
+          <section className="py-16 bg-zinc-950 border-t border-white/10">
             <div className="max-w-6xl mx-auto px-4">
-              <div className="flex flex-col items-center mb-8">
-                <a href={cmsData.instagramLink} target="_blank" className="flex items-center gap-2 text-white hover:text-pink-500 transition mb-2 group">
-                  <Instagram size={24} /> <span className="text-2xl font-bold">{cmsData.instagramUser}</span>
+              <div className="flex flex-col items-center mb-10">
+                <a href={cmsData.instagramLink} target="_blank" className="flex items-center gap-3 text-white hover:text-pink-500 transition mb-2 group bg-zinc-900 px-6 py-3 rounded-full border border-white/10">
+                  <Instagram size={24} /> <span className="text-xl font-bold">{cmsData.instagramUser}</span>
                 </a>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -394,7 +395,7 @@ export default function App() {
                       <iframe src={getEmbedUrl(item.url)} className="w-full h-full" frameBorder="0" scrolling="no" allowTransparency="true"></iframe>
                     ) : (
                       <a href={item.link} target="_blank" className="block w-full h-full relative">
-                        <img src={item.url} className="w-full h-full object-cover opacity-80 hover:opacity-100 transition" />
+                        <img src={item.url} className="w-full h-full object-cover opacity-70 group-hover:opacity-100 transition duration-500" />
                       </a>
                     )}
                   </div>
@@ -403,7 +404,7 @@ export default function App() {
             </div>
           </section>
 
-          <div className="text-center p-6 bg-black text-white/30 text-xs border-t border-white/5">© 2025 Barber Pro System</div>
+          <div className="text-center p-8 bg-black text-white/20 text-xs border-t border-white/5">© 2025 Barber Pro System</div>
         </div>
       </div>
     );
@@ -412,17 +413,20 @@ export default function App() {
   // --- LOGIN ---
   if (view === 'login') {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
-        <div className="bg-white w-full max-w-sm rounded-2xl p-8 shadow-2xl text-center">
-          <button onClick={() => setView('landing')} className="absolute top-4 left-4 text-gray-400"><ArrowLeft size={20}/></button>
-          <h2 className="text-2xl font-black text-gray-900 mb-6">Acceso Staff</h2>
+      <div className="min-h-screen bg-zinc-950 flex items-center justify-center p-4">
+        <div className="bg-zinc-900 w-full max-w-sm rounded-2xl p-8 shadow-2xl relative border border-white/10">
+          <button onClick={() => setView('landing')} className="absolute top-4 left-4 text-gray-400 hover:text-white"><ArrowLeft size={20}/></button>
+          <div className="text-center mb-8">
+            <div className="bg-yellow-600 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg text-white"><Lock size={24}/></div>
+            <h2 className="text-2xl font-black text-white">Staff Login</h2>
+          </div>
           <form onSubmit={handleLogin} className="space-y-4">
-            <input type="text" className="w-full p-3 border rounded-lg" placeholder="Usuario" value={loginForm.user} onChange={e => setLoginForm({...loginForm, user: e.target.value})} />
-            <input type="password" className="w-full p-3 border rounded-lg" placeholder="Contraseña" value={loginForm.pass} onChange={e => setLoginForm({...loginForm, pass: e.target.value})} />
-            {loginForm.error && <p className="text-red-500 text-xs font-bold">{loginForm.error}</p>}
-            <button className="w-full bg-black text-white font-bold py-3 rounded-xl hover:bg-gray-800">ENTRAR</button>
+            <input type="text" className="w-full p-3 border border-white/10 rounded-lg bg-black text-white outline-none focus:border-yellow-600 transition" placeholder="Usuario" value={loginForm.user} onChange={e => setLoginForm({...loginForm, user: e.target.value})} />
+            <input type="password" className="w-full p-3 border border-white/10 rounded-lg bg-black text-white outline-none focus:border-yellow-600 transition" placeholder="Contraseña" value={loginForm.pass} onChange={e => setLoginForm({...loginForm, pass: e.target.value})} />
+            {loginForm.error && <p className="text-red-500 text-xs font-bold text-center bg-red-900/20 p-2 rounded">{loginForm.error}</p>}
+            <button className="w-full bg-white text-black font-bold py-3 rounded-xl hover:bg-gray-200 transition">ENTRAR</button>
           </form>
-          {users.length === 0 && <button onClick={seedDatabase} className="mt-4 text-xs text-blue-500 flex items-center justify-center gap-1 mx-auto"><Database size={12}/> Inicializar DB</button>}
+          {users.length === 0 && <button onClick={seedDatabase} className="mt-6 text-xs text-blue-400 flex items-center justify-center gap-1 mx-auto hover:text-blue-300"><Database size={12}/> Activar Base de Datos</button>}
         </div>
       </div>
     );
@@ -477,20 +481,41 @@ export default function App() {
             </div>
           )}
 
+          {/* TAB: EQUIPO (ADMIN) */}
+          {currentUser.role === 'admin' && adminTab === 'team' && (
+            <section className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
+              <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2"><User size={20} className="text-blue-600"/> Gestión de Equipo</h3>
+              <form onSubmit={handleAddBarber} className="space-y-3 mb-6 bg-gray-50 p-4 rounded-xl border border-gray-200">
+                <input type="text" placeholder="Nombre" className="w-full p-2 border rounded" value={newBarber.name} onChange={e => setNewBarber({...newBarber, name: e.target.value})} />
+                <input type="tel" placeholder="Teléfono" className="w-full p-2 border rounded" value={newBarber.phone} onChange={e => setNewBarber({...newBarber, phone: e.target.value})} />
+                <div className="grid grid-cols-2 gap-2">
+                  <input type="text" placeholder="Usuario" className="p-2 border rounded" value={newBarber.username} onChange={e => setNewBarber({...newBarber, username: e.target.value})} />
+                  <input type="text" placeholder="Pass" className="p-2 border rounded" value={newBarber.password} onChange={e => setNewBarber({...newBarber, password: e.target.value})} />
+                </div>
+                <button className="w-full bg-black text-white font-bold py-2 rounded-lg">Crear Barbero</button>
+              </form>
+              <div className="space-y-2">
+                 {users.filter(u => u.role === 'barber').map(b => (
+                   <div key={b.id} className="flex justify-between items-center text-sm border-b py-2">
+                     <span>{b.name}</span>
+                     <button onClick={() => handleDeleteBarber(b.id)} className="text-red-400 hover:bg-red-50 p-2 rounded"><Trash2 size={16}/></button>
+                   </div>
+                 ))}
+              </div>
+            </section>
+          )}
+
           {/* TAB: WEB CMS (ADMIN) */}
           {currentUser.role === 'admin' && adminTab === 'website' && (
             <div className="space-y-6">
-              
-              {/* 1. TEXTOS PORTADA */}
               <section className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
-                <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2"><Edit3 size={18}/> Portada y Textos</h3>
+                <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2"><Edit3 size={18}/> Textos Portada</h3>
                 <div className="space-y-3">
                   <input type="text" className="w-full p-2 border rounded" value={cmsData.heroTitle} onChange={(e) => handleUpdateCms('heroTitle', e.target.value)} />
-                  <textarea className="w-full p-2 border rounded h-16" value={cmsData.heroSubtitle} onChange={(e) => handleUpdateCms('heroSubtitle', e.target.value)} />
+                  <textarea className="w-full p-2 border rounded h-20" value={cmsData.heroSubtitle} onChange={(e) => handleUpdateCms('heroSubtitle', e.target.value)} />
                 </div>
               </section>
 
-              {/* 2. SOBRE NOSOTROS Y FOTOS LOCAL */}
               <section className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
                 <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2"><Layout size={18}/> Sobre Nosotros y Local</h3>
                 <div className="space-y-3 mb-4">
@@ -512,13 +537,12 @@ export default function App() {
                 </div>
               </section>
 
-              {/* 3. TESTIMONIOS */}
               <section className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
                 <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2"><Star size={18}/> Testimonios Clientes</h3>
                 <div className="bg-gray-50 p-3 rounded-lg border mb-4">
                    <div className="grid grid-cols-3 gap-2 mb-2">
-                     <input type="text" className="col-span-1 p-2 border rounded text-sm" placeholder="Nombre Cliente" value={newTestimonial.name} onChange={e => setNewTestimonial({...newTestimonial, name: e.target.value})} />
-                     <input type="text" className="col-span-2 p-2 border rounded text-sm" placeholder="Comentario..." value={newTestimonial.text} onChange={e => setNewTestimonial({...newTestimonial, text: e.target.value})} />
+                     <input type="text" className="col-span-1 p-2 border rounded text-sm" placeholder="Nombre" value={newTestimonial.name} onChange={e => setNewTestimonial({...newTestimonial, name: e.target.value})} />
+                     <input type="text" className="col-span-2 p-2 border rounded text-sm" placeholder="Comentario" value={newTestimonial.text} onChange={e => setNewTestimonial({...newTestimonial, text: e.target.value})} />
                    </div>
                    <button onClick={handleAddTestimonial} className="w-full bg-black text-white py-2 rounded text-sm font-bold">Agregar Testimonio</button>
                 </div>
@@ -532,16 +556,34 @@ export default function App() {
                 </div>
               </section>
 
-              {/* 4. UBICACIÓN */}
               <section className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
                 <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2"><MapPin size={18}/> Ubicación</h3>
                 <div className="space-y-3">
-                  <input type="text" className="w-full p-2 border rounded" placeholder="Dirección Texto" value={cmsData.address} onChange={(e) => handleUpdateCms('address', e.target.value)} />
-                  <input type="text" className="w-full p-2 border rounded text-xs text-gray-500" placeholder="URL Google Maps Embed" value={cmsData.mapUrl} onChange={(e) => handleUpdateCms('mapUrl', e.target.value)} />
+                  <input type="text" className="w-full p-2 border rounded" value={cmsData.address} onChange={(e) => handleUpdateCms('address', e.target.value)} />
+                  <input type="text" className="w-full p-2 border rounded text-xs text-gray-500" value={cmsData.mapUrl} onChange={(e) => handleUpdateCms('mapUrl', e.target.value)} />
                 </div>
               </section>
 
-              {/* 5. INSTAGRAM */}
+              <section className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
+                <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2"><Tag size={18}/> Ofertas</h3>
+                <div className="bg-gray-50 p-3 rounded-lg mb-4">
+                  <div className="grid grid-cols-2 gap-2 mb-2">
+                    <input type="text" placeholder="Título" className="p-2 border rounded text-sm" value={newOffer.title} onChange={e => setNewOffer({...newOffer, title: e.target.value})} />
+                    <input type="number" placeholder="Precio" className="p-2 border rounded text-sm" value={newOffer.price} onChange={e => setNewOffer({...newOffer, price: e.target.value})} />
+                  </div>
+                  <input type="text" placeholder="Descripción" className="w-full p-2 border rounded text-sm mb-2" value={newOffer.desc} onChange={e => setNewOffer({...newOffer, desc: e.target.value})} />
+                  <button onClick={handleAddOffer} className="w-full bg-blue-600 text-white font-bold py-2 rounded text-sm">Agregar Oferta</button>
+                </div>
+                <div className="space-y-2">
+                  {cmsData.offers.map(offer => (
+                    <div key={offer.id} className="flex justify-between items-center text-sm border-b py-2">
+                      <div><span className="font-bold">{offer.title}</span> - ${offer.price}</div>
+                      <button onClick={() => handleDeleteOffer(offer.id)} className="text-red-400"><Trash2 size={16}/></button>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
               <section className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
                 <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2"><Instagram size={18}/> Galería (Fotos & Reels)</h3>
                 <div className="bg-gray-50 p-3 rounded-lg border mb-4">
@@ -564,31 +606,7 @@ export default function App() {
             </div>
           )}
 
-          {/* TAB: EQUIPO (ADMIN) */}
-          {currentUser.role === 'admin' && adminTab === 'team' && (
-            <section className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
-              <h3 className="font-bold text-gray-800 mb-4 flex items-center gap-2"><User size={20} className="text-blue-600"/> Gestión de Equipo</h3>
-              <form onSubmit={handleAddBarber} className="space-y-3 mb-6 bg-gray-50 p-4 rounded-xl border border-gray-200">
-                <input type="text" placeholder="Nombre" className="w-full p-2 border rounded" value={newBarber.name} onChange={e => setNewBarber({...newBarber, name: e.target.value})} />
-                <input type="tel" placeholder="Teléfono" className="w-full p-2 border rounded" value={newBarber.phone} onChange={e => setNewBarber({...newBarber, phone: e.target.value})} />
-                <div className="grid grid-cols-2 gap-2">
-                  <input type="text" placeholder="User" className="p-2 border rounded" value={newBarber.username} onChange={e => setNewBarber({...newBarber, username: e.target.value})} />
-                  <input type="text" placeholder="Pass" className="p-2 border rounded" value={newBarber.password} onChange={e => setNewBarber({...newBarber, password: e.target.value})} />
-                </div>
-                <button className="w-full bg-black text-white font-bold py-2 rounded-lg">Crear Barbero</button>
-              </form>
-              <div className="space-y-2">
-                 {users.filter(u => u.role === 'barber').map(b => (
-                   <div key={b.id} className="flex justify-between items-center text-sm border-b py-2">
-                     <span>{b.name}</span>
-                     <button onClick={() => handleDeleteBarber(b.id)} className="text-red-400 hover:bg-red-50 p-2 rounded"><Trash2 size={16}/></button>
-                   </div>
-                 ))}
-              </div>
-            </section>
-          )}
-
-          {/* TAB: MIS SERVICIOS (BARBERO) */}
+          {/* MIS SERVICIOS (BARBERO) */}
           {currentUser.role === 'barber' && (
             <section className="bg-white p-5 rounded-2xl shadow-sm border border-gray-200">
                <h3 className="font-bold text-gray-800 mb-3">Mis Servicios</h3>
@@ -603,11 +621,23 @@ export default function App() {
             </section>
           )}
         </main>
+
+        {apptToCancel && (
+          <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4">
+             <div className="bg-white w-full max-w-sm rounded-2xl p-6">
+                <h3 className="font-bold text-lg mb-2">Cancelar Cita</h3>
+                <textarea className="w-full border p-3 rounded mb-4" placeholder="Motivo" value={cancelReason} onChange={e => setCancelReason(e.target.value)}></textarea>
+                <div className="flex gap-2">
+                  <button onClick={() => setApptToCancel(null)} className="flex-1 py-3 text-gray-500 font-bold">Volver</button>
+                  <button onClick={confirmCancellation} className="flex-1 py-3 bg-red-500 text-white rounded font-bold">Confirmar</button>
+                </div>
+             </div>
+          </div>
+        )}
       </div>
     );
   }
 
-  // --- BOOKING ---
   if (view === 'booking') {
     const activeBarbers = users.filter(u => u.role === 'barber');
     return (
