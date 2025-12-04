@@ -236,7 +236,7 @@ export default function App() {
     await updateDoc(doc(db, "appointments", apptToCancel.id), { status: 'cancelled' });
     
     let cleanPhone = apptToCancel.phone.replace(/\D/g, ''); 
-    if (cleanPhone.length >= 8 && !cleanPhone.startsWith('56')) cleanPhone = '569' + cleanPhone; 
+    if (cleanPhone.length >= 8 && !cleanPhone.startsWith('56')) cleanPhone = '56' + cleanPhone; 
     
     const message = `Hola ${apptToCancel.clientName}. Cancelamos tu cita: ${cancelReason}.`;
     window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`, '_blank');
