@@ -1,15 +1,20 @@
 /**
- * SISTEMA DE GESTIÓN DE BARBERÍA (BARBER PRO) - CÓDIGO MAESTRO
- * ------------------------------------------------------------
- * Este archivo contiene TODA la aplicación: Base de datos, Panel Admin, 
- * Sitio Web Cliente y Lógica de Negocio.
+ * SISTEMA DE GESTIÓN DE BARBERÍA (BARBER PRO) - VERSIÓN FINAL V8.0
+ * ================================================================
+ * CARACTERÍSTICAS:
+ * 1. Loader: Animación de Poste de Barbero (Rojo/Blanco/Azul).
+ * 2. Base de Datos: Firebase Firestore en tiempo real.
+ * 3. CMS: El dueño edita textos, fotos, ofertas y sucursales.
+ * 4. Reservas: Bloqueo de horario, abonos y confirmación WhatsApp.
+ * 5. Galería: Soporte para Fotos y Reels de Instagram.
  */
 
-// 1. IMPORTACIONES DE LIBRERÍAS
-// React: Para crear la interfaz. useState (memoria), useEffect (acciones automáticas).
+// 1. IMPORTACIONES
+// ----------------
+// React para la interfaz y hooks para la memoria del sistema.
 import React, { useState, useEffect } from 'react';
 
-// Lucide-React: Paquete de iconos modernos para que la app se vea profesional.
+// Iconos profesionales para botones y menús.
 import { 
   Calendar, User, CheckCircle, X, LogOut, Phone, Scissors, 
   CreditCard, ChevronRight, ArrowLeft, Plus, Trash2, Lock, 
@@ -18,19 +23,18 @@ import {
   Star, Quote, Layout, Landmark, Check, Filter, DollarSign, Map
 } from 'lucide-react';
 
-// 2. IMPORTACIONES DE FIREBASE (BASE DE DATOS EN LA NUBE)
-// Importamos las herramientas necesarias para conectar y manejar datos.
+// Importamos las funciones necesarias de Firebase directamente aquí
+// para evitar errores de importación de archivos externos.
 import { initializeApp } from "firebase/app";
 import { 
   getFirestore, collection, addDoc, deleteDoc, updateDoc, doc, onSnapshot 
 } from 'firebase/firestore';
 
-// ==============================================================================
-// 3. CONFIGURACIÓN DE FIREBASE (INTEGRADA)
-// ==============================================================================
-// Aquí ponemos las credenciales directamente para evitar errores de importación.
+// 2. CONFIGURACIÓN DE FIREBASE
+// ----------------------------
+// Estas credenciales conectan tu app con la nube de Google.
 const firebaseConfig = {
-  apiKey: "AIzaSyBPz3IuCfBBAXuCIF2kfufxOT-62jbzYFo", // Llave de acceso (Pública)
+  apiKey: "AIzaSyBPz3IuCfBBAXuCIF2kfufxOT-62jbzYFo", // Llave pública
   authDomain: "barberpro-app-36c6e.firebaseapp.com",
   projectId: "barberpro-app-36c6e",
   storageBucket: "barberpro-app-36c6e.firebasestorage.app",
@@ -38,25 +42,21 @@ const firebaseConfig = {
   appId: "1:219195978888:web:05a55510d73766a9709b3d"
 };
 
-// Inicializamos la conexión con Google Firebase
+// Iniciamos la conexión
 const app = initializeApp(firebaseConfig);
-// Creamos la referencia a la base de datos (db) que usaremos en toda la app
 const db = getFirestore(app);
 
 
-// ==============================================================================
-// 4. DATOS POR DEFECTO (SEMILLA)
-// ==============================================================================
-// Estos datos se usan SOLO la primera vez para "sembrar" la base de datos
-// si está vacía. Representan el contenido editable de la página web.
-
+// 3. DATOS POR DEFECTO (SEMILLA)
+// ------------------------------
+// Si la base de datos está vacía, usamos esto para rellenarla la primera vez.
 const DEFAULT_CMS_DATA = {
-  heroTitle: "Estilo Legendario", // Título principal de la portada
-  heroSubtitle: "Tu imagen es nuestra prioridad. Agenda en segundos.", // Bajada de texto
-  aboutTitle: "Más que una Barbería", // Título sección "Nosotros"
-  aboutText: "En Barber Pro no solo cortamos cabello, creamos experiencias...", // Descripción
+  heroTitle: "Estilo Legendario",
+  heroSubtitle: "Tu imagen es nuestra prioridad. Agenda en segundos.",
+  aboutTitle: "Más que una Barbería",
+  aboutText: "En Barber Pro no solo cortamos cabello, creamos experiencias...",
   
-  // Lista de Sucursales (Array para soportar múltiples locales)
+  // Lista de sucursales (Array para soportar múltiples)
   locations: [
     { 
       id: 1, 
@@ -66,26 +66,24 @@ const DEFAULT_CMS_DATA = {
     }
   ],
   
-  instagramUser: "@BarberPro_Talagante", // Usuario de IG para mostrar
-  instagramLink: "https://instagram.com", // Enlace al perfil
-  gallery: [], // Array vacío para fotos/reels que suba el admin
+  instagramUser: "@BarberPro_Talagante",
+  instagramLink: "https://instagram.com",
+  gallery: [], // Aquí irán los Reels y Fotos
   
-  // Fotos predeterminadas para la sección del local
-  shopPhotos: [
+  shopPhotos: [ // Fotos de la sección 'Nosotros'
     { id: 1, url: "https://images.unsplash.com/photo-1503951914875-befbb711058c?auto=format&fit=crop&w=800&q=80" },
     { id: 2, url: "https://images.unsplash.com/photo-1621605815971-fbc98d665033?auto=format&fit=crop&w=800&q=80" }
   ],
   
-  // Testimonios iniciales de prueba
-  testimonials: [
+  testimonials: [ // Opiniones de ejemplo
     { id: 1, name: "Carlos M.", text: "El mejor degradado que me han hecho.", stars: 5 },
     { id: 2, name: "Felipe R.", text: "Excelente atención.", stars: 5 }
   ],
   
-  offers: [] // Ofertas vacías al inicio
+  offers: []
 };
 
-// Usuarios iniciales (Admin y Barberos) para poder loguearse la primera vez
+// Usuarios iniciales para poder entrar al sistema
 const SEED_USERS = [
   {
     name: "Dueño / Admin", username: "admin", password: "123", role: "admin",
@@ -94,136 +92,115 @@ const SEED_USERS = [
   { 
     name: 'Dani "El Mago"', username: "dani", password: "123", role: "barber",
     photo: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Felix', phone: "56911111111",
-    // Datos bancarios específicos de este barbero
+    // Datos bancarios reales del barbero
     bank: { name: "Daniel Mago", rut: "15.111.111-1", bankName: "Banco Estado", type: "Cuenta RUT", number: "15111111", email: "dani@barber.cl" },
     services: [{ id: 101, name: 'Corte Degradado', price: 12000 }, { id: 102, name: 'Barba Terapia', price: 15000 }]
   }
 ];
 
-
 // ==============================================================================
-// 5. COMPONENTE PRINCIPAL (LÓGICA DE LA APP)
+// 4. COMPONENTE PRINCIPAL (LÓGICA DEL SISTEMA)
 // ==============================================================================
 export default function App() {
   
-  // --- ESTADOS DE LA BASE DE DATOS (MEMORIA VIVA) ---
-  // users: Guarda la lista de barberos y admins descargada de Firebase
-  const [users, setUsers] = useState([]); 
-  // appointments: Guarda todas las reservas (citas)
-  const [appointments, setAppointments] = useState([]); 
-  // cmsData: Guarda textos, fotos y config de la web
-  const [cmsData, setCmsData] = useState(DEFAULT_CMS_DATA); 
-  // cmsId: Guardamos el ID del documento en Firebase para saber cuál actualizar
-  const [cmsId, setCmsId] = useState(null); 
+  // --- ESTADOS DE DATOS (FIREBASE) ---
+  const [users, setUsers] = useState([]); // Lista de usuarios (Admin/Barberos)
+  const [appointments, setAppointments] = useState([]); // Lista de reservas
+  const [cmsData, setCmsData] = useState(DEFAULT_CMS_DATA); // Contenido web editable
+  const [cmsId, setCmsId] = useState(null); // ID del documento CMS para guardar cambios
   
-  // --- ESTADOS DE CONTROL DE INTERFAZ ---
-  // view: Controla qué pantalla ve el usuario ('landing', 'login', 'admin', 'booking')
-  const [view, setView] = useState('landing'); 
-  // loading: Muestra el spinner de carga mientras bajamos datos de internet
-  const [loading, setLoading] = useState(true); 
-  // currentUser: Guarda los datos de la persona que inició sesión (Staff)
-  const [currentUser, setCurrentUser] = useState(null); 
-  // loginForm: Controla lo que se escribe en los inputs de usuario/contraseña
-  const [loginForm, setLoginForm] = useState({ user: '', pass: '', error: '' }); 
+  // --- ESTADOS DE NAVEGACIÓN ---
+  const [view, setView] = useState('landing'); // Qué pantalla se ve
+  const [loading, setLoading] = useState(true); // Spinner de carga
+  const [currentUser, setCurrentUser] = useState(null); // Quién está logueado
+  const [loginForm, setLoginForm] = useState({ user: '', pass: '', error: '' });
 
-  // --- ESTADOS DEL PANEL DE ADMIN ---
-  // adminTab: Qué pestaña del panel está viendo ('agenda', 'team', 'website')
-  const [adminTab, setAdminTab] = useState('agenda'); 
-  // agendaMode: Filtro para ver citas 'daily' (por día) o 'pending' (solo deudores)
-  const [agendaMode, setAgendaMode] = useState('daily'); 
-  // filterDate: La fecha que se muestra en el calendario (por defecto HOY)
-  const [filterDate, setFilterDate] = useState(new Date().toISOString().split('T')[0]); 
+  // --- ESTADOS DEL ADMIN (FORMULARIOS) ---
+  const [adminTab, setAdminTab] = useState('agenda'); // Pestaña actual
+  const [agendaMode, setAgendaMode] = useState('daily'); // Filtro de agenda
+  const [filterDate, setFilterDate] = useState(new Date().toISOString().split('T')[0]); // Fecha filtro
 
-  // Formularios para crear nuevo contenido (Inputs controlados)
+  // Inputs para crear contenido
   const [newBarber, setNewBarber] = useState({ name: '', username: '', password: '', photo: '', phone: '', bankName: '', bankRut: '', bankBank: '', bankType: '', bankNumber: '', bankEmail: '' });
   const [newOffer, setNewOffer] = useState({ title: '', price: '', desc: '' });
   const [newGalleryItem, setNewGalleryItem] = useState({ type: 'image', url: '', link: '' });
   const [newShopPhoto, setNewShopPhoto] = useState('');
   const [newLocation, setNewLocation] = useState({ name: '', address: '', mapUrl: '' });
 
-  // --- ESTADOS ESPECÍFICOS DEL BARBERO ---
-  const [newService, setNewService] = useState({ name: '', price: '' }); 
-  const [cancelReason, setCancelReason] = useState(''); // Motivo al cancelar una cita
-  const [apptToCancel, setApptToCancel] = useState(null); // Cita seleccionada para cancelar
+  // --- ESTADOS BARBERO ---
+  const [newService, setNewService] = useState({ name: '', price: '' });
+  const [cancelReason, setCancelReason] = useState('');
+  const [apptToCancel, setApptToCancel] = useState(null);
 
-  // --- ESTADOS DEL FLUJO DE RESERVA (CLIENTE) ---
-  // bookingStep: En qué paso va el cliente (1:Barbero -> 2:Servicio -> 3:Fecha -> 4:Confirmar -> 5:Éxito)
-  const [bookingStep, setBookingStep] = useState(1); 
-  // reservation: Datos temporales de la reserva que se está creando
-  const [reservation, setReservation] = useState({ barber: null, service: null, date: '', time: '', client: '', phone: '' }); 
-  // lastBookingData: Datos para mostrar en la pantalla final (Link WhatsApp)
-  const [lastBookingData, setLastBookingData] = useState(null); 
-  
-  // --- ESTADO PARA RESEÑAS ---
-  const [showReviewModal, setShowReviewModal] = useState(false); // Abrir/Cerrar modal
-  const [clientReview, setClientReview] = useState({ name: '', text: '', stars: 5 }); // Formulario
+  // --- ESTADOS CLIENTE ---
+  const [bookingStep, setBookingStep] = useState(1); // Paso del wizard
+  const [reservation, setReservation] = useState({ barber: null, service: null, date: '', time: '', client: '', phone: '' });
+  const [lastBookingData, setLastBookingData] = useState(null); // Para pantalla final
+  const [showReviewModal, setShowReviewModal] = useState(false); // Modal reseñas
+  const [clientReview, setClientReview] = useState({ name: '', text: '', stars: 5 });
 
   // ==============================================================================
-  // 6. EFECTO DE INICIO (CONEXIÓN A FIREBASE)
+  // 5. CONEXIÓN REALTIME A FIREBASE
   // ==============================================================================
-  
   useEffect(() => {
-    // A. Escuchamos la colección "users" en tiempo real
+    // Escuchar cambios en Usuarios
     const unsubUsers = onSnapshot(collection(db, "users"), (s) => {
-      setUsers(s.docs.map(d => ({ id: d.id, ...d.data() }))); // Actualizamos estado
+      setUsers(s.docs.map(d => ({ id: d.id, ...d.data() })));
     });
 
-    // B. Escuchamos la colección "appointments" (Citas)
+    // Escuchar cambios en Citas
     const unsubAppts = onSnapshot(collection(db, "appointments"), (s) => {
       setAppointments(s.docs.map(d => ({ id: d.id, ...d.data() })));
     });
 
-    // C. Escuchamos la colección "cms" (Datos de la web)
+    // Escuchar cambios en la Web (CMS)
     const unsubCms = onSnapshot(collection(db, "cms"), (s) => {
       if (!s.empty) { 
-        setCmsData(s.docs[0].data()); // Cargamos datos
-        setCmsId(s.docs[0].id); // Guardamos ID para editar
+        setCmsData(s.docs[0].data()); 
+        setCmsId(s.docs[0].id); 
       }
-      setLoading(false); // ¡Datos listos! Quitamos pantalla de carga
+      setLoading(false); // ¡Datos listos! Quitamos loader
     });
 
-    // D. Limpieza: Cuando se cierra la app, dejamos de escuchar para ahorrar datos
     return () => { unsubUsers(); unsubAppts(); unsubCms(); };
   }, []);
 
-  // Función para guardar cambios en la configuración Web (CMS)
+  // Guardar CMS en la nube
   const saveCms = async (newData) => {
-    if (cmsId) await updateDoc(doc(db, "cms", cmsId), newData); // Si existe, actualizamos
-    else await addDoc(collection(db, "cms"), newData); // Si no, creamos
+    if (cmsId) await updateDoc(doc(db, "cms", cmsId), newData);
+    else await addDoc(collection(db, "cms"), newData);
   };
 
-  // Función para "sembrar" la base de datos si está vacía
+  // Inicializar Base de Datos (Botón secreto)
   const seedDatabase = async () => {
-    if (confirm("¿Inicializar Base de Datos?")) {
+    if (confirm("¿Inicializar BD?")) {
       for (const u of SEED_USERS) await addDoc(collection(db, "users"), u);
       await addDoc(collection(db, "cms"), DEFAULT_CMS_DATA);
-      alert("¡Listo! Usuario: admin / Clave: 123");
+      alert("Listo");
     }
   };
 
   // ==============================================================================
-  // 7. LÓGICA DE NEGOCIO (INTELIGENCIA)
+  // 6. LÓGICA DE NEGOCIO (REGLAS)
   // ==============================================================================
 
-  // ALGORITMO DE BLOQUEO DE HORARIO (1 HORA)
+  // Algoritmo de Disponibilidad (Bloqueo de 1 hora)
   const getAvailableSlots = (barberId, date) => {
     const slots = [];
-    const startHour = 10; // Abre 10:00
-    const endHour = 20;   // Cierra 20:00
-    
-    // Obtenemos citas de ese barbero en esa fecha que NO estén canceladas
+    const startHour = 10;
+    const endHour = 20;
+    // Filtramos citas activas de ese día y barbero
     const barberAppts = appointments.filter(a => a.barberId === barberId && a.date === date && a.status !== 'cancelled');
 
     for (let h = startHour; h < endHour; h++) {
       const timeString = `${h}:00`; 
-      const slotMinutes = h * 60; // Convertimos a minutos para calcular fácil
+      const slotMinutes = h * 60;
       
-      // Revisamos si hay choque con alguna cita existente
+      // Verificamos choque horario
       const isBlocked = barberAppts.some(appt => {
         const [apptH, apptM] = appt.time.split(':').map(Number);
         const apptMinutes = apptH * 60 + apptM;
-        // Si la diferencia es menor a 60 min, bloqueamos
-        return Math.abs(slotMinutes - apptMinutes) < 60; 
+        return Math.abs(slotMinutes - apptMinutes) < 60; // Regla de 1 hora
       });
 
       slots.push({ time: timeString, available: !isBlocked });
@@ -231,7 +208,7 @@ export default function App() {
     return slots;
   };
 
-  // Convertidor de URL de Instagram a Embed (para videos)
+  // Helper para convertir links de IG a formato Embed (Video)
   const getEmbedUrl = (url) => {
     if (!url) return '';
     if (url.includes('/embed')) return url;
@@ -240,17 +217,17 @@ export default function App() {
   };
 
   // ==============================================================================
-  // 8. MANEJADORES DE ACCIONES (ADMINISTRACIÓN)
+  // 7. MANEJADORES (ADMINISTRACIÓN)
   // ==============================================================================
 
-  // Actualizar un campo del CMS genérico
+  // Actualizar CMS genérico
   const handleUpdateCms = (field, value) => {
     const newData = { ...cmsData, [field]: value };
-    setCmsData(newData); // Feedback visual inmediato
-    saveCms(newData); // Guardar en la nube
+    setCmsData(newData);
+    saveCms(newData);
   };
 
-  // --- SUCURSALES ---
+  // Gestión Sucursales
   const handleAddLocation = (e) => {
     e.preventDefault();
     if(!newLocation.name || !newLocation.address) return alert("Faltan datos");
@@ -260,7 +237,7 @@ export default function App() {
   };
   const handleDeleteLocation = (id) => handleUpdateCms('locations', cmsData.locations.filter(l => l.id !== id));
 
-  // --- RESEÑAS ---
+  // Gestión Reseñas
   const handleSubmitReview = (e) => {
     e.preventDefault();
     if(!clientReview.name || !clientReview.text) return alert("Completa los campos");
@@ -268,11 +245,11 @@ export default function App() {
     handleUpdateCms('testimonials', updated);
     setClientReview({ name: '', text: '', stars: 5 });
     setShowReviewModal(false);
-    alert("¡Gracias por tu opinión!");
+    alert("¡Gracias!");
   };
   const handleDeleteTestimonial = (id) => handleUpdateCms('testimonials', cmsData.testimonials.filter(t => t.id !== id));
 
-  // --- OFERTAS ---
+  // Gestión Ofertas
   const handleAddOffer = (e) => {
     e.preventDefault();
     if(!newOffer.title) return;
@@ -282,7 +259,7 @@ export default function App() {
   };
   const handleDeleteOffer = (id) => handleUpdateCms('offers', cmsData.offers.filter(o => o.id !== id));
 
-  // --- GALERÍA ---
+  // Gestión Galería
   const handleAddGalleryItem = () => {
     if(!newGalleryItem.url) return;
     const linkToUse = newGalleryItem.link || (newGalleryItem.type === 'reel' ? newGalleryItem.url : cmsData.instagramLink);
@@ -292,7 +269,7 @@ export default function App() {
   };
   const handleDeleteGalleryItem = (id) => handleUpdateCms('gallery', cmsData.gallery.filter(i => i.id !== id));
 
-  // --- FOTOS LOCAL ---
+  // Gestión Fotos Local
   const handleAddShopPhoto = () => {
     if(!newShopPhoto) return;
     const updated = [...(cmsData.shopPhotos || []), { id: Date.now(), url: newShopPhoto }];
@@ -302,10 +279,10 @@ export default function App() {
   const handleDeleteShopPhoto = (id) => handleUpdateCms('shopPhotos', cmsData.shopPhotos.filter(p => p.id !== id));
 
   // ==============================================================================
-  // 9. GESTIÓN DE USUARIOS Y CITAS
+  // 8. GESTIÓN USUARIOS Y RESERVAS
   // ==============================================================================
 
-  // Login de Staff
+  // Login
   const handleLogin = (e) => {
     e.preventDefault();
     const foundUser = users.find(u => u.username === loginForm.user && u.password === loginForm.pass);
@@ -314,11 +291,11 @@ export default function App() {
       setLoginForm({ user: '', pass: '', error: '' });
       setView(foundUser.role === 'admin' ? 'admin-panel' : 'barber-panel');
     } else {
-      setLoginForm({ ...loginForm, error: 'Credenciales incorrectas' });
+      setLoginForm({ ...loginForm, error: 'Error de credenciales' });
     }
   };
 
-  // Cliente solicita reserva (Nace PENDIENTE)
+  // Solicitar Reserva
   const requestReservation = async () => {
     await addDoc(collection(db, "appointments"), {
       barberId: reservation.barber.id,
@@ -328,70 +305,54 @@ export default function App() {
       price: reservation.service.price,
       date: reservation.date,
       time: reservation.time,
-      status: 'pending', // Nace amarilla
+      status: 'pending', 
       deposit: { paid: false, method: 'Transferencia' }
     });
-    
-    // Mensaje WhatsApp pre-llenado
-    const msg = `Hola ${reservation.barber.name} 👋, soy ${reservation.client}. Acabo de transferir el abono para mi cita: *${reservation.service.name}* el ${reservation.date} a las ${reservation.time}. Aquí te envío el comprobante.`;
+    // Link para enviar comprobante
+    const msg = `Hola ${reservation.barber.name}, soy ${reservation.client}. Reservé *${reservation.service.name}* el ${reservation.date} a las ${reservation.time}. Envío comprobante.`;
     const link = `https://wa.me/${reservation.barber.phone}?text=${encodeURIComponent(msg)}`;
-    
     setLastBookingData({ waLink: link });
-    setBookingStep(5); // Muestra pantalla final
+    setBookingStep(5); // Pantalla final
   };
 
-  // Barbero confirma pago (Pasa a VERDE)
+  // Confirmar Pago
   const confirmPayment = async (apptId) => {
-    if(window.confirm("¿Confirmas que recibiste el dinero?")) {
-      await updateDoc(doc(db, "appointments", apptId), { 
-        status: 'confirmed',
-        'deposit.paid': true 
-      });
+    if(window.confirm("¿Confirmas el abono?")) {
+      await updateDoc(doc(db, "appointments", apptId), { status: 'confirmed', 'deposit.paid': true });
     }
   };
 
-  // Cancelación de Cita (Abre WhatsApp)
+  // Cancelar Cita
   const confirmCancellation = async () => {
-    if (!cancelReason) return alert("Escribe un motivo");
+    if (!cancelReason) return alert("Escribe motivo");
     await updateDoc(doc(db, "appointments", apptToCancel.id), { status: 'cancelled' });
-    
     let cleanPhone = apptToCancel.phone.replace(/\D/g, ''); 
-    if (cleanPhone.length >= 8 && !cleanPhone.startsWith('56')) cleanPhone = '569' + cleanPhone; 
-    
-    const message = `Hola ${apptToCancel.clientName}. Cancelamos tu cita por: ${cancelReason}.`;
+    if (cleanPhone.length >= 8) cleanPhone = '569' + cleanPhone; 
+    const message = `Hola ${apptToCancel.clientName}. Cancelamos tu cita: ${cancelReason}.`;
     window.open(`https://wa.me/${cleanPhone}?text=${encodeURIComponent(message)}`, '_blank');
-    
     setApptToCancel(null);
     setCancelReason('');
   };
 
-  // Crear Barbero (Admin)
+  // Agregar Barbero
   const handleAddBarber = async (e) => {
     e.preventDefault();
-    // Validaciones
-    if (!newBarber.name.trim() || !newBarber.username.trim() || !newBarber.password.trim() || !newBarber.phone.trim()) {
-        return alert("Faltan datos obligatorios");
-    }
-    
+    if (!newBarber.name.trim() || !newBarber.username.trim()) return alert("Faltan datos");
     const photoUrl = newBarber.photo.trim() || `https://api.dicebear.com/7.x/avataaars/svg?seed=${newBarber.username}`;
-    
     const newUser = { 
-      role: 'barber', 
-      name: newBarber.name, username: newBarber.username, password: newBarber.password, phone: newBarber.phone, photo: photoUrl, 
-      // Datos bancarios anidados
+      role: 'barber', ...newBarber, photo: photoUrl, 
       bank: { name: newBarber.bankName, rut: newBarber.bankRut, bankName: newBarber.bankBank, type: newBarber.bankType, number: newBarber.bankNumber, email: newBarber.bankEmail },
       services: [] 
     };
     await addDoc(collection(db, "users"), newUser);
     setNewBarber({ name: '', username: '', password: '', photo: '', phone: '', bankName: '', bankRut: '', bankBank: '', bankType: '', bankNumber: '', bankEmail: '' });
-    alert("Barbero creado.");
+    alert("Barbero creado");
   };
-
   const handleDeleteBarber = async (id) => { if(window.confirm("¿Eliminar?")) await deleteDoc(doc(db, "users", id)); };
   
-  // Agregar Servicio (Barbero)
+  // Agregar Servicio
   const handleAddService = async () => {
-    if (!newService.name.trim() || !newService.price) return alert("Completa los datos.");
+    if (!newService.name.trim() || !newService.price) return alert("Faltan datos");
     const updatedServices = [...(currentUser.services || []), { id: Date.now(), name: newService.name, price: parseInt(newService.price) }];
     await updateDoc(doc(db, "users", currentUser.id), { services: updatedServices });
     setCurrentUser({ ...currentUser, services: updatedServices });
@@ -399,11 +360,24 @@ export default function App() {
   };
 
   // ==============================================================================
-  // 10. VISTAS (RENDERIZADO)
+  // 9. RENDERIZADO DE VISTAS
   // ==============================================================================
 
-  // PANTALLA DE CARGA
-  if (loading) return <div className="min-h-screen bg-black flex items-center justify-center text-white font-bold">Cargando Barber Pro...</div>;
+  // PANTALLA DE CARGA (LOADER BARBER POLE)
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-black flex flex-col items-center justify-center">
+        {/* Círculo que gira con bordes de colores de barbería */}
+        <div className="relative w-24 h-24 animate-spin rounded-full border-[8px] border-t-red-600 border-r-blue-600 border-b-white border-l-white shadow-[0_0_50px_rgba(255,255,255,0.2)]">
+          {/* Centro estático para dar efecto de profundidad */}
+          <div className="absolute inset-2 bg-black rounded-full flex items-center justify-center">
+             <Scissors size={32} className="text-white animate-pulse" />
+          </div>
+        </div>
+        <p className="text-white mt-8 font-black text-lg tracking-[0.5em] uppercase animate-pulse">Cargando...</p>
+      </div>
+    );
+  }
 
   // --- VISTA 1: LANDING PAGE ---
   if (view === 'landing') {
@@ -411,20 +385,19 @@ export default function App() {
 
     return (
       <div className="min-h-screen font-sans flex flex-col relative bg-zinc-950 overflow-x-hidden text-white">
-        
-        {/* Fondo con Imagen */}
+        {/* FONDO */}
         <div className="absolute inset-0 z-0">
           <div className="absolute inset-0 bg-gradient-to-b from-black/80 via-black/60 to-zinc-950 z-10"></div> 
           <img src="https://images.unsplash.com/photo-1585747860715-2ba37e788b70?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80" className="w-full h-full object-cover opacity-60" alt="bg"/>
         </div>
 
         <div className="relative z-20 flex flex-col min-h-screen">
-          {/* Botón WhatsApp Flotante */}
+          {/* WHATSAPP FLOTANTE */}
           <a href={`https://wa.me/56900000000`} target="_blank" className="fixed bottom-6 right-6 bg-green-500 p-4 rounded-full shadow-lg z-50 hover:scale-110 transition animate-bounce">
             <MessageCircle size={28} color="white" />
           </a>
 
-          {/* Navegación Superior */}
+          {/* NAVBAR */}
           <nav className="p-6 flex justify-between items-center border-b border-white/10 backdrop-blur-md">
             <div className="flex items-center gap-3">
               <div className="bg-yellow-500 p-2 rounded-lg text-black shadow-[0_0_15px_rgba(234,179,8,0.5)]"><Scissors size={24}/></div>
@@ -435,14 +408,14 @@ export default function App() {
             </button>
           </nav>
 
-          {/* Portada Hero */}
+          {/* HERO */}
           <div className="flex-1 flex flex-col items-center justify-center text-center p-6 mt-10">
             <h1 className="text-5xl md:text-7xl font-black mb-6 uppercase leading-none tracking-tighter animate-fade-in-up text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 via-yellow-500 to-yellow-600 drop-shadow-[0_2px_2px_rgba(0,0,0,0.8)]">{cmsData.heroTitle}</h1>
             <p className="text-gray-200 mb-12 text-lg max-w-2xl mx-auto animate-fade-in-up delay-100 font-light drop-shadow-md">{cmsData.heroSubtitle}</p>
             <button onClick={() => setView('booking')} className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-black font-black py-5 px-12 rounded-full text-xl hover:from-yellow-400 hover:to-yellow-500 transition transform hover:scale-105 shadow-[0_0_30px_rgba(234,179,8,0.6)] active:scale-95 flex flex-row items-center justify-center gap-3"><Calendar size={24} /> <span>RESERVAR AHORA</span></button>
           </div>
 
-          {/* Sección Ofertas (Si existen) */}
+          {/* OFERTAS */}
           {cmsData.offers && cmsData.offers.length > 0 && (
             <section className="py-12 px-4 bg-zinc-900/50 backdrop-blur-sm border-y border-white/10">
               <div className="max-w-6xl mx-auto">
@@ -461,7 +434,7 @@ export default function App() {
             </section>
           )}
 
-          {/* Sección Equipo */}
+          {/* EQUIPO */}
           <section className="py-20 px-4 bg-zinc-950">
             <div className="max-w-6xl mx-auto text-center">
               <h3 className="text-3xl font-black text-white mb-12 uppercase tracking-tight">Nuestro Equipo</h3>
@@ -477,7 +450,7 @@ export default function App() {
             </div>
           </section>
 
-          {/* Sección "Nosotros" y Testimonios */}
+          {/* NOSOTROS Y TESTIMONIOS */}
           <section className="py-20 bg-zinc-900 text-white border-t border-white/5">
             <div className="max-w-6xl mx-auto px-4 grid md:grid-cols-2 gap-12 items-center">
               <div>
@@ -490,7 +463,6 @@ export default function App() {
                 </div>
               </div>
               
-              {/* Caja de Testimonios con Botón */}
               <div className="bg-black/40 p-8 rounded-3xl relative border border-white/5">
                 <Quote className="absolute top-6 left-6 text-yellow-600 opacity-20" size={60} />
                 <div className="flex justify-between items-center mb-8">
@@ -510,7 +482,7 @@ export default function App() {
             </div>
           </section>
 
-          {/* Sección Ubicación (Soporta múltiples) */}
+          {/* SUCURSALES */}
           <section className="py-20 bg-black border-t border-white/10">
             <div className="max-w-6xl mx-auto px-4">
               <h3 className="text-4xl font-black mb-10 uppercase text-white text-center">Nuestras Sucursales</h3>
@@ -536,7 +508,7 @@ export default function App() {
             </div>
           </section>
 
-          {/* Galería Instagram */}
+          {/* GALERÍA */}
           <section className="py-16 bg-zinc-950 border-t border-white/10">
             <div className="max-w-6xl mx-auto px-4">
               <div className="flex flex-col items-center mb-10">
@@ -562,7 +534,7 @@ export default function App() {
 
           <div className="text-center p-8 bg-black text-white/20 text-xs border-t border-white/5">© 2025 Barber Pro System</div>
         
-          {/* Modal de Reseñas */}
+          {/* MODAL RESEÑAS */}
           {showReviewModal && (
             <div className="fixed inset-0 bg-black/80 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
               <div className="bg-zinc-900 border border-white/10 w-full max-w-sm rounded-2xl p-6 shadow-2xl">
@@ -610,11 +582,10 @@ export default function App() {
     );
   }
 
-  // --- VISTA 3: PANELES (ADMIN Y BARBERO) ---
+  // --- VISTA 3: PANELES ---
   if (view === 'admin-panel' || view === 'barber-panel') {
     const visibleAppts = currentUser.role === 'admin' ? appointments : appointments.filter(a => a.barberId === currentUser.id);
     
-    // FILTRADO INTELIGENTE DE AGENDA
     let filteredAppts = visibleAppts.filter(a => a.status !== 'cancelled');
     if (agendaMode === 'daily') {
       filteredAppts = filteredAppts.filter(a => a.date === filterDate);
@@ -885,7 +856,7 @@ export default function App() {
   if (view === 'booking') {
     const activeBarbers = users.filter(u => u.role === 'barber');
     
-    // PANTALLA ÉXITO (PASO 5)
+    // PANTALLA ÉXITO
     if (bookingStep === 5 && lastBookingData) {
       return (
         <div className="min-h-screen bg-black flex flex-col items-center justify-center p-6 text-center animate-fade-in text-white">
