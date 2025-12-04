@@ -12,7 +12,7 @@ import {
   collection, addDoc, deleteDoc, updateDoc, doc, onSnapshot 
 } from 'firebase/firestore';
 
-// --- DATOS POR DEFECTO (Se usan si la BD está vacía) ---
+// --- DATOS POR DEFECTO ---
 const DEFAULT_CMS_DATA = {
   heroTitle: "Estilo Legendario",
   heroSubtitle: "Tu imagen es nuestra prioridad. Agenda en segundos con los mejores.",
@@ -282,7 +282,7 @@ export default function App() {
               {cmsData.heroSubtitle}
             </p>
             
-            {/* BOTÓN CORREGIDO: FLEX ROW PARA ALINEAR ICONO Y TEXTO */}
+            {/* BOTÓN RESERVAR CORREGIDO */}
             <button 
               onClick={() => setView('booking')} 
               className="bg-gradient-to-r from-yellow-500 to-yellow-600 text-black font-black py-5 px-12 rounded-full text-xl hover:from-yellow-400 hover:to-yellow-500 transition transform hover:scale-105 shadow-[0_0_30px_rgba(234,179,8,0.6)] active:scale-95 flex flex-row items-center justify-center gap-3"
@@ -466,10 +466,12 @@ export default function App() {
                         <h4 className="font-bold text-gray-900 text-lg">{app.clientName}</h4>
                         <p className="text-sm text-blue-600 font-medium">{app.serviceName}</p>
                         <p className="text-xs text-gray-400 flex items-center gap-1 mt-1"><Phone size={12}/> {app.phone}</p>
+                        {currentUser.role === 'admin' && <p className="text-xs text-gray-400 mt-1">Barbero: {users.find(u => u.id === app.barberId)?.name}</p>}
                       </div>
                       <div className="text-right">
                         <span className="block text-2xl font-bold">{app.time}</span>
                         <span className="text-xs bg-gray-100 px-2 py-1 rounded font-bold">{app.date}</span>
+                        {app.deposit?.paid && <span className="block mt-2 text-xs text-green-600 font-bold flex items-center justify-end gap-1"><CheckCircle size={10}/> Abonado</span>}
                       </div>
                     </div>
                     <button onClick={() => setApptToCancel(app)} className="mt-4 w-full border border-red-100 text-red-500 text-xs font-bold py-2.5 rounded-lg hover:bg-red-50 flex items-center justify-center gap-2">
@@ -492,6 +494,13 @@ export default function App() {
                   <input type="text" placeholder="Usuario" className="p-2 border rounded" value={newBarber.username} onChange={e => setNewBarber({...newBarber, username: e.target.value})} />
                   <input type="text" placeholder="Pass" className="p-2 border rounded" value={newBarber.password} onChange={e => setNewBarber({...newBarber, password: e.target.value})} />
                 </div>
+                
+                {/* CAMPO FOTO CORREGIDO */}
+                <div className="flex gap-2 items-center">
+                   <Camera size={20} className="text-gray-400" />
+                   <input type="text" placeholder="URL Foto Perfil (Opcional)" className="flex-1 p-2 border rounded text-sm" value={newBarber.photo} onChange={e => setNewBarber({...newBarber, photo: e.target.value})} />
+                </div>
+
                 <button className="w-full bg-black text-white font-bold py-2 rounded-lg">Crear Barbero</button>
               </form>
               <div className="space-y-2">
